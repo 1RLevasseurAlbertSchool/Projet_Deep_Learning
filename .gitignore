@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# Secrets
+.env
+
+# Données (téléchargées par src/data.py)
+data/*
+!data/README.md
+
+# Modèles, checkpoints, index
+/models/
+/checkpoints/
+/outputs/
+/out/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.faiss
+*.npy
+
+# Résultats volumineux (les métriques JSON/CSV et les figures restent versionnées)
+results/predictions/
+wandb/
+runs/*/events*
+
+# Supports de cours (non redistribués)
+docs/ressources_methodologie/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,28 @@
+# Python 3.11+
+# Cœur deep learning
+torch>=2.4
+transformers>=5.0          # noms transformers 5 : eval_strategy, processing_class
+accelerate>=1.0
+datasets>=3.0
+peft>=0.13
+sentence-transformers>=3.0
+
+# ML classique, métriques, statistiques
+scikit-learn>=1.5
+scipy>=1.13
+numpy>=1.26
+pandas>=2.2
+pyarrow>=16
+
+# Retrieval
+rank-bm25>=0.2.2
+
+# Visualisation, notebooks
+matplotlib>=3.9
+seaborn>=0.13
+jupyterlab>=4.2
+ipykernel>=6.29
+tqdm>=4.66
+
+# Tests
+pytest>=8.0
