@@ -163,7 +163,8 @@ Any deviation from the pre-registered comparison is logged here.
 - **Interface note (to confirm with the team)**: a run evaluated on several splits writes the contract metrics
   (`macro_f1`, `micro_f1`, `accuracy`, `per_class_f1`) under one key per split (`metrics["validation"]`,
   `metrics["test"]`), next to `train_time_s`, `n_trainable_params`, `n_total_params`, `peak_gpu_memory_mb`
-  (None without CUDA) and `history` (loss / macro-F1 curves).
+  (None without CUDA) and `history` (loss / macro-F1 curves). Contract #4 of `CLAUDE.md` updated accordingly,
+  with a JSON example.
 - Revision of the pretrained weights recorded in `config.json` from the HF cache snapshot
   (`transformers` 5.20 no longer sets `config._commit_hash`).
 - Next: A4 on Colab (full DistilBERT, validation only).
