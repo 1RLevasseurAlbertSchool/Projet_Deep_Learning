@@ -1,5 +1,5 @@
-"""Audit de biais et de robustesse (volet C, Brian).
+"""Bias and robustness audit (stream C, Brian).
 
-Entrée : fichiers results/predictions/<run_id>_test.parquet (format commun, voir CLAUDE.md).
-Sorties : performances par tranche, tests contrefactuels, hors distribution, calibration.
+Input: results/predictions/<run_id>_test.parquet files (common format, see CLAUDE.md).
+Outputs: per-slice performance, counterfactual tests, out-of-distribution tests, calibration.
 """

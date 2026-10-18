@@ -1,1 +1,1 @@
-"""Cœur NLP de l'assistant de revue de contrats (LEDGAR)."""
+"""NLP core of the contract-review assistant (LEDGAR)."""

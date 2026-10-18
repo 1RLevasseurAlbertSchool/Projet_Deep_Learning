@@ -1,152 +1,151 @@
 # Clause Review Assistant — NLP core (LEDGAR)
 
-Projet final du cours **Deep Learning for Sequential Data and NLP** (MSA-DAT07-01, Albert School, G. Saint-Cirgue).
+Final project of the course **Deep Learning for Sequential Data and NLP** (MSA-DAT07-01, Albert School, G. Saint-Cirgue).
 
-> Nous sommes l'équipe IA d'une start-up européenne de legal-tech. Nous construisons, évaluons et auditons le
-> **cœur NLP d'un assistant de revue de contrats** qui :
-> 1. **classe** chaque clause dans l'un des 100 types de la checklist de revue ;
-> 2. **retrouve** les clauses les plus proches dans une banque de clauses, à partir d'une clause collée ou d'une
->    question d'avocat (*« show me termination clauses with a 30-day notice period »*) ;
-> 3. **documente** où il est fiable — globalement, par type de clause, par type de contrat et de partie — et **ce pour
->    quoi il ne doit pas être utilisé**.
+> We are the AI team of a European legal-tech start-up. We build, evaluate and audit the
+> **NLP core of a contract-review assistant** that:
+> 1. **classifies** every clause into one of the 100 clause types of the review checklist;
+> 2. **retrieves** the most similar clauses from a clause bank, given a pasted clause or a lawyer's question
+>    (*"show me termination clauses with a 30-day notice period"*);
+> 3. **documents** where it can be trusted — overall, per clause type, per kind of contract and party — and **what it
+>    must not be used for**.
 
-## Présentation
+## Presentation
 
-> Lien vers les slides (10 min + 5 min Q&A) : *à ajouter*.
+> Link to the slides (10 min + 5 min Q&A): *to be added*.
 
-## Équipe
+## Team
 
-| Membre | Volet | Jalons du cours |
+| Member | Work stream | Course milestones |
 |---|---|---|
-| **Robin** | A — Transformers : fine-tuning BERT-class, LoRA, tests appariés, calibration | m4 |
-| **Amandine** | B — Données, baselines & RNN : chargement LEDGAR, EDA, TF-IDF, LSTM, analyse d'erreurs | m1, m3 |
-| **Brian** | C — Retrieval & audit : index sentence-transformer, évaluation retrieval, audit de biais, model card | m2, audit |
+| **Robin** | A — Transformers: BERT-class fine-tuning, LoRA, paired tests, calibration | m4 |
+| **Amandine** | B — Data, baselines & RNN: LEDGAR loading, EDA, TF-IDF, LSTM, error analysis | m1, m3 |
+| **Brian** | C — Retrieval & audit: sentence-transformer index, retrieval evaluation, bias audit, model card | m2, audit |
 
-Le plan détaillé, la répartition et le calendrier sont dans [`STRATEGIE.md`](STRATEGIE.md) et
-[`tasks/todo.md`](tasks/todo.md). L'état réel du projet est dans [`AVANCEMENT.md`](AVANCEMENT.md).
+The detailed plan, task split and schedule are in [`STRATEGY.md`](STRATEGY.md) and [`tasks/todo.md`](tasks/todo.md).
+The actual state of the project is in [`PROGRESS.md`](PROGRESS.md).
 
-## Données — LEDGAR (LexGLUE)
+## Data — LEDGAR (LexGLUE)
 
 | | Train | Validation | Test |
 |---|---:|---:|---:|
-| Clauses | 60 000 | 10 000 | 10 000 |
-| Années des contrats | 2016–2017 | 2018 | 2019 |
+| Clauses | 60,000 | 10,000 | 10,000 |
+| Contract years | 2016–2017 | 2018 | 2019 |
 
-- **Source** : clauses (*provisions*) de contrats déposés à la SEC (base **EDGAR**), version **LexGLUE**
-  (Chalkidis et al., 2022), Hugging Face : `coastalcph/lex_glue`, configuration `ledgar`.
-- **Tâche** : classification **mono-label**, **100 classes** très déséquilibrées.
-- **Split chronologique** : le test (2019) est postérieur à l'entraînement (2016-2017) → la performance de test
-  mesure déjà une forme de **dérive temporelle**.
-- Les données ne sont pas versionnées (`data/` est gitignoré) : elles sont téléchargées par `src/data.py`.
+- **Source**: provisions from contracts filed with the SEC (**EDGAR** database), **LexGLUE** version
+  (Chalkidis et al., 2022), Hugging Face: `coastalcph/lex_glue`, configuration `ledgar`.
+- **Task**: **single-label** classification, **100 highly imbalanced classes**.
+- **Chronological split**: the test set (2019) comes after the training set (2016-2017) → test performance already
+  measures a form of **temporal drift**.
+- The data is not versioned (`data/` is gitignored): it is downloaded by `src/data.py`.
 
-## Pipeline et jalons
+## Pipeline and milestones
 
-| Jalon | Contenu | Notebook / script | Statut |
+| Milestone | Content | Notebook / script | Status |
 |---|---|---|---|
-| **m1** | Chargement LEDGAR, distribution des classes, baseline **TF-IDF + régression logistique**, macro-F1 | `notebooks/01_eda_baseline.ipynb` | ⏳ |
-| **m2** | Index de recherche **sentence-transformer** sur les clauses (embed, normalise, top-k cosinus) + requêtes vérifiées à la main | `notebooks/02_retrieval_index.ipynb` | ⏳ |
-| **m3** | Classifieur **LSTM** (GloVe, packing) + analyse d'erreurs (F1 par classe, classes les plus confondues) | `notebooks/03_lstm_classifier.ipynb` | ⏳ |
-| **m4** | **Fine-tuning BERT-class** (full) + **LoRA** + tableau de compromis + **test apparié** de la comparaison principale | `notebooks/04_transformer_finetuning.ipynb` | ⏳ |
-| audit | Évaluation retrieval, **audit de biais / robustesse** par tranche, model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb` | ⏳ |
+| **m1** | LEDGAR loading, class distribution, **TF-IDF + logistic regression** baseline, macro-F1 | `notebooks/01_eda_baseline.ipynb` | ⏳ |
+| **m2** | **Sentence-transformer** retrieval index over the clauses (embed, normalise, top-k cosine) + queries checked by hand | `notebooks/02_retrieval_index.ipynb` | ⏳ |
+| **m3** | **LSTM** classifier (GloVe, packing) + error analysis (per-class F1, most confused classes) | `notebooks/03_lstm_classifier.ipynb` | ⏳ |
+| **m4** | **BERT-class fine-tuning** (full) + **LoRA** + trade-off table + **paired test** of the main comparison | `notebooks/04_transformer_finetuning.ipynb` | ⏳ |
+| audit | Retrieval evaluation, **bias / robustness audit** per slice, model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb` | ⏳ |
 
-## Comparaison principale (pré-enregistrée le 14 octobre 2026, avant toute expérience)
+## Main comparison (pre-registered on 14 October 2026, before any experiment)
 
-Le cours demande d'écrire la comparaison principale **avant** de la lancer. Ce bloc ne sera pas modifié après les
-premiers résultats ; tout écart au protocole sera signalé explicitement dans [`AVANCEMENT.md`](AVANCEMENT.md).
+The course asks us to write the main comparison **before** running it. This block will not be changed after the
+first results; any deviation from the protocol will be stated explicitly in [`PROGRESS.md`](PROGRESS.md).
 
-- **Question** : un encodeur BERT-class fine-tuné bat-il significativement la baseline TF-IDF + régression
-  logistique sur LEDGAR ?
-- **Modèle A** : le meilleur encodeur fine-tuné (full fine-tuning), choisi **sur la validation (2018) uniquement**
-  parmi `distilbert-base-uncased`, `bert-base-uncased`, `nlpaueb/legal-bert-base-uncased`, `microsoft/deberta-v3-base`
-  (selon le budget GPU).
-- **Modèle B** : TF-IDF + régression logistique, hyperparamètres (C, n-grammes) réglés sur la validation.
-- **Métrique principale** : **macro-F1** sur le test (2019), évalué **une seule fois** par modèle. Secondaire :
-  accuracy (= micro-F1).
-- **Test** : **bootstrap apparié** sur la macro-F1 (1 000 rééchantillonnages, IC à 95 %, graine 42) ; **McNemar**
-  sur l'accuracy (exact si b + c < 25).
-- **Hypothèse H1** : ΔF1 = F1(A) − F1(B) > 0, avec un IC à 95 % qui exclut 0.
-- **Ce que l'on sait déjà** : dans LexGLUE, l'écart publié est faible (TF-IDF SVM 81,4 vs Legal-BERT 83,0 en
-  macro-F1). Il est donc **plausible que l'écart ne soit pas significatif** — ce sera reporté tel quel.
-- **Comparaison secondaire** : full fine-tuning vs **LoRA** (r ∈ {4, 8, 16}) sur le même encodeur : paramètres
-  entraînés, temps, mémoire GPU, macro-F1, test apparié.
+- **Question**: does a fine-tuned BERT-class encoder significantly beat the TF-IDF + logistic regression baseline on
+  LEDGAR?
+- **Model A**: the best fine-tuned encoder (full fine-tuning), selected **on the validation set (2018) only** among
+  `distilbert-base-uncased`, `bert-base-uncased`, `nlpaueb/legal-bert-base-uncased`, `microsoft/deberta-v3-base`
+  (depending on the GPU budget).
+- **Model B**: TF-IDF + logistic regression, hyperparameters (C, n-grams) tuned on the validation set.
+- **Main metric**: **macro-F1** on the test set (2019), evaluated **once** per model. Secondary: accuracy (= micro-F1).
+- **Test**: **paired bootstrap** on macro-F1 (1,000 resamples, 95 % CI, seed 42); **McNemar** on accuracy (exact
+  if b + c < 25).
+- **Hypothesis H1**: ΔF1 = F1(A) − F1(B) > 0, with a 95 % CI that excludes 0.
+- **What we already know**: in LexGLUE the published gap is small (TF-IDF SVM 81.4 vs Legal-BERT 83.0 macro-F1).
+  It is therefore **plausible that the gap is not significant** — this will be reported as such.
+- **Secondary comparison**: full fine-tuning vs **LoRA** (r ∈ {4, 8, 16}) on the same encoder: trained parameters,
+  time, GPU memory, macro-F1, paired test.
 
-## Résultats
+## Results
 
-> Section remplie uniquement avec des résultats réellement obtenus (voir `results/`).
+> This section is filled only with results actually obtained (see `results/`).
 
-| Modèle | Paramètres entraînés | Macro-F1 val | Macro-F1 test | Accuracy test | Temps d'entraînement |
+| Model | Trained parameters | Val macro-F1 | Test macro-F1 | Test accuracy | Training time |
 |---|---:|---:|---:|---:|---:|
 | TF-IDF + LogReg | — | | | | |
 | LSTM (GloVe) | | | | | |
 | BERT-class (full FT) | | | | | |
 | BERT-class + LoRA | | | | | |
 
-| Retrieval | P@5 (même type) | MRR | Requêtes manuelles réussies |
+| Retrieval | P@5 (same type) | MRR | Manual queries passed |
 |---|---:|---:|---:|
 | `all-MiniLM-L6-v2` | | | |
 
-## Ce que le système ne doit pas faire
+## What the system must not do
 
-Résumé provisoire — la version argumentée et chiffrée sera dans [`docs/model_card.md`](docs/model_card.md) :
+Provisional summary — the argued, quantified version will be in [`docs/model_card.md`](docs/model_card.md):
 
-- donner un avis juridique ou juger de la validité / l'opposabilité d'une clause ;
-- classer des clauses **non anglaises** (modèles entraînés sur de l'anglais juridique américain) ;
-- classer des types de clauses **hors des 100 classes** LEDGAR sans signal d'incertitude ;
-- remplacer la relecture d'un avocat : il **priorise** et **suggère**, il ne décide pas.
+- give legal advice or judge the validity / enforceability of a clause;
+- classify **non-English** clauses (models trained on US legal English);
+- classify clause types **outside the 100 LEDGAR classes** without an uncertainty signal;
+- replace a lawyer's review: it **prioritises** and **suggests**, it does not decide.
 
 ## Installation
 
 ```bash
-git clone <URL_DU_REPO>
+git clone https://github.com/1RLevasseurAlbertSchool/Projet_Deep_Learning.git
 cd Projet_Deep_Learning
 
 python -m venv .venv && source .venv/bin/activate   # Python 3.11+
 pip install -r requirements.txt
 
-python -m pytest -q          # tests des métriques partagées
-python -m src.data           # vérifie le chargement de LEDGAR (60k / 10k / 10k, 100 labels)
+python -m pytest -q          # tests of the shared metrics
+python -m src.data           # checks LEDGAR loading (60k / 10k / 10k, 100 labels)
 ```
 
-Les entraînements lourds (fine-tuning) se font sur **Google Colab (GPU)** ; le reste tourne en local.
-Dans Colab : cloner le repo, `pip install -r requirements.txt`, puis ouvrir le notebook.
+Heavy training (fine-tuning) runs on **Google Colab (GPU)**; everything else runs locally.
+In Colab: clone the repo, `pip install -r requirements.txt`, then open the notebook.
 
-## Reproductibilité
+## Reproducibility
 
-- Graine globale **42** (`src/utils.py::set_seed`), versions des modèles et des librairies figées et reportées.
-- Chaque run écrit sa configuration, ses métriques et ses prédictions dans `results/` (format décrit dans
+- Global seed **42** (`src/utils.py::set_seed`), model and library versions pinned and reported.
+- Every run writes its configuration, metrics and predictions to `results/` (format described in
   [`CLAUDE.md`](CLAUDE.md)).
-- Le test n'est utilisé **qu'une fois** par modèle final ; toutes les décisions sont prises sur la validation.
+- The test set is used **only once** per final model; every decision is made on the validation set.
 
-## Structure du projet
+## Project structure
 
 ```
-├── README.md              # Ce fichier : vue d'ensemble, comparaison pré-enregistrée, résultats
-├── CLAUDE.md              # Règles de travail du projet (humains + Claude Code)
-├── AVANCEMENT.md          # Journal opérationnel : état réel, résultats, problèmes, prochaines actions
-├── STRATEGIE.md           # Stratégie, répartition A/B/C, calendrier, risques, plan de soutenance
+├── README.md              # This file: overview, pre-registered comparison, results
+├── CLAUDE.md              # Working rules of the project (humans + Claude Code)
+├── PROGRESS.md            # Operational log: actual state, results, problems, next actions
+├── STRATEGY.md            # Strategy, A/B/C split, schedule, risks, presentation plan
 ├── requirements.txt
-├── data/                  # (gitignoré) raw/ et processed/ — LEDGAR téléchargé par src/data.py
-├── notebooks/             # Notebooks numérotés, lus dans l'ordre (00 → 06)
+├── data/                  # (gitignored) raw/ and processed/ — LEDGAR downloaded by src/data.py
+├── notebooks/             # Numbered notebooks, read in order (00 → 06)
 ├── src/
-│   ├── config.py          # Chemins, graine, nom du dataset, constantes partagées
-│   ├── data.py            # Chargement LEDGAR + noms des labels (contrat d'interface commun)
-│   ├── metrics.py         # Macro-F1, F1 par classe, bootstrap apparié, McNemar
-│   ├── utils.py           # Graine, sauvegarde des runs
-│   ├── models/            # Volets A et B : TF-IDF, LSTM, fine-tuning HF, LoRA
-│   ├── retrieval/         # Volet C : index sentence-transformer, BM25, hybride
-│   └── audit/             # Volet C : tranches, perturbations contrefactuelles, calibration
-├── scripts/               # Points d'entrée en ligne de commande (entraînement, évaluation)
-├── eval/                  # Jeux construits à la main : questions d'avocat, contrefactuels, hors distribution
-├── tests/                 # Tests unitaires (pytest), ex. métriques vérifiées sur les exercices du cours
-├── results/               # Métriques (JSON/CSV) et figures versionnées ; prédictions gitignorées
+│   ├── config.py          # Paths, seed, dataset name, shared constants
+│   ├── data.py            # LEDGAR loading + label names (shared interface contract)
+│   ├── metrics.py         # Macro-F1, per-class F1, paired bootstrap, McNemar
+│   ├── utils.py           # Seed, saving runs
+│   ├── models/            # Streams A and B: TF-IDF, LSTM, HF fine-tuning, LoRA
+│   ├── retrieval/         # Stream C: sentence-transformer index, BM25, hybrid
+│   └── audit/             # Stream C: slices, counterfactual perturbations, calibration
+├── scripts/               # Command-line entry points (training, evaluation)
+├── eval/                  # Hand-built sets: lawyer questions, counterfactuals, out-of-distribution
+├── tests/                 # Unit tests (pytest), e.g. metrics checked against the course exercises
+├── results/               # Versioned metrics (JSON/CSV) and figures; predictions gitignored
 ├── docs/
-│   └── model_card.md      # Usage prévu / interdit, performances par tranche, limites
+│   └── model_card.md      # Intended / prohibited use, per-slice performance, limitations
 └── tasks/
-    ├── todo.md            # Liste des tâches par volet, avec dates
-    └── lessons.md         # Boucle d'amélioration : erreurs et règles pour les éviter
+    ├── todo.md            # Task list per work stream, with dates
+    └── lessons.md         # Improvement loop: mistakes and rules to avoid them
 ```
 
-## Références
+## References
 
 - Chalkidis et al. (2022), *LexGLUE: A Benchmark Dataset for Legal Language Understanding in English*, ACL. [arXiv:2110.00976](https://arxiv.org/abs/2110.00976)
 - Tuggener et al. (2020), *LEDGAR: A Large-Scale Multi-label Corpus for Text Classification of Legal Provisions in Contracts*, LREC.
@@ -154,5 +153,5 @@ Dans Colab : cloner le repo, `pip install -r requirements.txt`, puis ouvrir le n
 
 ## Licence
 
-Projet académique. Les données LEDGAR / LexGLUE sont utilisées selon les conditions de leurs auteurs
-(voir la fiche du dataset sur Hugging Face). Les supports de cours ne sont pas redistribués dans ce dépôt.
+Academic project. LEDGAR / LexGLUE data is used under its authors' terms (see the dataset card on Hugging Face).
+Course materials are not redistributed in this repository.

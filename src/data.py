@@ -1,12 +1,12 @@
-"""Chargement de LEDGAR (LexGLUE) — contrat d'interface commun aux trois volets.
+"""LEDGAR (LexGLUE) loading — interface contract shared by the three work streams.
 
-Usage :
+Usage:
     from src.data import load_ledgar, get_label_names, to_pandas
     ds = load_ledgar()                 # DatasetDict train / validation / test
-    names = get_label_names(ds)        # liste de 100 noms de classes, index = id du label
-    df_train = to_pandas(ds, "train")  # DataFrame avec idx, text, label, label_name
+    names = get_label_names(ds)        # list of 100 class names, index = label id
+    df_train = to_pandas(ds, "train")  # DataFrame with idx, text, label, label_name
 
-Ne jamais re-splitter : le split chronologique (2016-17 / 2018 / 2019) fait partie de l'évaluation.
+Never re-split: the chronological split (2016-17 / 2018 / 2019) is part of the evaluation.
 """
 
 from __future__ import annotations
@@ -23,12 +23,12 @@ from src.config import (
 
 
 def load_ledgar(subset: int | None = None, check: bool = True):
-    """Charge LEDGAR depuis le Hub Hugging Face.
+    """Load LEDGAR from the Hugging Face Hub.
 
     Args:
-        subset: si fourni, ne garde que les `subset` premiers exemples de chaque split
-            (smoke tests uniquement — jamais pour un résultat rapporté).
-        check: vérifie tailles et nombre de labels sur le dataset complet.
+        subset: if given, keep only the first `subset` examples of each split
+            (smoke tests only — never for a reported result).
+        check: check sizes and number of labels on the full dataset.
     """
     from datasets import load_dataset
 
@@ -38,10 +38,10 @@ def load_ledgar(subset: int | None = None, check: bool = True):
         for split in SPLITS:
             n = len(ds[split])
             if n != EXPECTED_SIZES[split]:
-                raise ValueError(f"Taille inattendue pour {split}: {n} (attendu {EXPECTED_SIZES[split]})")
+                raise ValueError(f"Unexpected size for {split}: {n} (expected {EXPECTED_SIZES[split]})")
         n_labels = len(get_label_names(ds))
         if n_labels != NUM_LABELS:
-            raise ValueError(f"{n_labels} labels trouvés, {NUM_LABELS} attendus")
+            raise ValueError(f"{n_labels} labels found, {NUM_LABELS} expected")
 
     if subset is not None:
         for split in SPLITS:
@@ -50,12 +50,12 @@ def load_ledgar(subset: int | None = None, check: bool = True):
 
 
 def get_label_names(ds) -> list[str]:
-    """Noms des classes, dans l'ordre des ids (0 à 99)."""
+    """Class names, in id order (0 to 99)."""
     return list(ds["train"].features[LABEL_COL].names)
 
 
 def to_pandas(ds, split: str):
-    """DataFrame d'un split avec `idx` (position dans le split, clé des fichiers de prédictions)."""
+    """DataFrame of a split with `idx` (position in the split, key of the prediction files)."""
     names = get_label_names(ds)
     df = ds[split].to_pandas()
     df.insert(0, "idx", range(len(df)))
@@ -67,4 +67,4 @@ if __name__ == "__main__":
     ds = load_ledgar()
     print(ds)
     names = get_label_names(ds)
-    print(f"{len(names)} labels, ex. : {names[:5]}")
+    print(f"{len(names)} labels, e.g.: {names[:5]}")

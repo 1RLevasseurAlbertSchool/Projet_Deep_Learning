@@ -1,4 +1,4 @@
-"""Tests des métriques partagées, vérifiés sur les exercices du cours (S01 Ex. 3, S06 Ex. 5)."""
+"""Tests of the shared metrics, checked against the course exercises (S01 Ex. 3, S06 Ex. 5)."""
 
 import numpy as np
 import pytest
@@ -16,7 +16,7 @@ def _from_confusion(cm):
 
 
 def test_macro_f1_course_exercise():
-    # S01, Exercice 3 : termination / payment / confidentiality, 70 clauses
+    # S01, Exercise 3: termination / payment / confidentiality, 70 clauses
     y_true, y_pred = _from_confusion([[44, 4, 2], [2, 6, 2], [1, 1, 8]])
     m = classification_metrics(y_true, y_pred, num_labels=3)
     assert m["accuracy"] == pytest.approx(58 / 70)
@@ -33,11 +33,11 @@ def _paired(b, c, a=0, d=0):
 
 
 def test_mcnemar_course_exercise():
-    # S06, Exercice 5 : b = 60, c = 40 -> chi2 = 19^2 / 100 = 3.61, non significatif à 5 %
+    # S06, Exercise 5: b = 60, c = 40 -> chi2 = 19^2 / 100 = 3.61, not significant at 5 %
     r = mcnemar_test(*_paired(b=60, c=40, a=830, d=70))
     assert r["chi2"] == pytest.approx(3.61)
     assert r["p_value"] > 0.05
-    # b = 25, c = 5 -> chi2 = 19^2 / 30 = 12.03, significatif
+    # b = 25, c = 5 -> chi2 = 19^2 / 30 = 12.03, significant
     r = mcnemar_test(*_paired(b=25, c=5, a=865, d=105))
     assert r["chi2"] == pytest.approx(361 / 30)
     assert r["p_value"] < 0.05

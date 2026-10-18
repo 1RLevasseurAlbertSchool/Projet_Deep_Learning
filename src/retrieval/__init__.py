@@ -1,5 +1,5 @@
-"""Recherche de clauses similaires (volet C, Brian).
+"""Similar-clause retrieval (stream C, Brian).
 
-API attendue : search(query: str, k: int = 5) -> list[dict] avec idx, text, label, label_name, score.
-Banque = split train ; embeddings normalisés (cosinus = produit scalaire), mis en cache dans data/indexes/.
+Expected API: search(query: str, k: int = 5) -> list[dict] with idx, text, label, label_name, score.
+Bank = train split; normalised embeddings (cosine = dot product), cached in data/indexes/.
 """

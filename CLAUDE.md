@@ -1,90 +1,90 @@
 # CLAUDE.md
 
-Ce fichier guide Claude Code (et les membres de l'équipe) quand ils travaillent dans ce dépôt.
-À relire au début de chaque session, avec [`AVANCEMENT.md`](AVANCEMENT.md) et [`tasks/lessons.md`](tasks/lessons.md).
+This file guides Claude Code (and the team members) when working in this repository.
+Read it at the start of every session, together with [`PROGRESS.md`](PROGRESS.md) and [`tasks/lessons.md`](tasks/lessons.md).
 
-## Projet
+## Project
 
-Projet final noté du cours **Deep Learning for Sequential Data and NLP** (Albert School, G. Saint-Cirgue).
-Mise en situation : ingénieurs IA d'une start-up européenne de legal-tech. On construit, évalue et audite le
-**cœur NLP d'un assistant de revue de contrats** :
+Graded final project of the course **Deep Learning for Sequential Data and NLP** (Albert School, G. Saint-Cirgue).
+Scenario: AI engineers at a European legal-tech start-up. We build, evaluate and audit the
+**NLP core of a contract-review assistant**:
 
-1. **Classification** de chaque clause parmi les 100 types LEDGAR (fine-tuning d'un encodeur BERT-class) ;
-2. **Recherche** des clauses similaires dans une banque de clauses (index sentence-transformer), à partir d'une clause
-   ou d'une question d'avocat ;
-3. **Preuves** que ça marche (global, par type de clause, par type de contrat / partie) + **audit de biais** + énoncé
-   clair des usages interdits.
+1. **Classification** of every clause into one of the 100 LEDGAR types (fine-tuning of a BERT-class encoder);
+2. **Retrieval** of similar clauses from a clause bank (sentence-transformer index), given a clause or a lawyer's
+   question;
+3. **Evidence** that it works (overall, per clause type, per kind of contract / party) + **bias audit** + a clear
+   statement of prohibited uses.
 
-- **Livrables** : code source sur GitHub le **23 octobre 2026** + présentation PowerPoint (**10 min + 5 min Q&A**)
-  devant le « CTO » (le jury).
-- **Équipe** : Robin (volet A), Amandine (volet B), Brian (volet C) — voir [`STRATEGIE.md`](STRATEGIE.md).
-- **Langue du code** : Python, noms de variables / fonctions / commits **en anglais**.
-- **Langue des docs et commentaires** : **français**.
-- **Supports de cours** : `docs/ressources_methodologie/` (Sessions 1 à 6, PDF) — **gitignorés**, ne jamais les
-  pousser. Les sessions 7 (seq2seq + audit de biais) et 8 ne sont pas encore disponibles.
+- **Deliverables**: source code on GitHub on **23 October 2026** + PowerPoint presentation (**10 min + 5 min Q&A**)
+  in front of the "CTO" (the jury).
+- **Team**: Robin (stream A), Amandine (stream B), Brian (stream C) — see [`STRATEGY.md`](STRATEGY.md).
+- **Language**: **English everywhere** — code, comments, docstrings, documentation, commit messages
+  (Brian does not speak French).
+- **Course materials**: `docs/ressources_methodologie/` (Sessions 1 to 6, PDF) — **gitignored**, never push them.
+  Sessions 7 (seq2seq + bias audit) and 8 are not available yet.
 
-## Données
+## Data
 
-**LEDGAR** (version LexGLUE), Hugging Face `coastalcph/lex_glue`, configuration `ledgar`.
+**LEDGAR** (LexGLUE version), Hugging Face `coastalcph/lex_glue`, configuration `ledgar`.
 
-| Split | Clauses | Années | Usage |
+| Split | Clauses | Years | Use |
 |---|---:|---|---|
-| `train` | 60 000 | 2016–2017 | apprentissage ; **banque de clauses** pour le retrieval |
-| `validation` | 10 000 | 2018 | **toutes** les décisions : hyperparamètres, early stopping, choix de modèle, seuils |
-| `test` | 10 000 | 2019 | **une seule évaluation** par modèle final ; requêtes du retrieval |
+| `train` | 60,000 | 2016–2017 | training; **clause bank** for retrieval |
+| `validation` | 10,000 | 2018 | **every** decision: hyperparameters, early stopping, model choice, thresholds |
+| `test` | 10,000 | 2019 | **a single evaluation** per final model; retrieval queries |
 
-- Colonnes : `text` (str), `label` (int 0-99) ; noms des classes via `src/data.py::get_label_names()`.
-- Mono-label, **100 classes très déséquilibrées** → la métrique de référence est la **macro-F1** (S01, S04).
-- Split **chronologique** : test postérieur au train → dérive temporelle déjà incluse.
-- Point à vérifier à l'EDA : **quasi-doublons** entre train et test (clauses boilerplate identiques) → mesurer leur
-  part et rapporter la macro-F1 aussi sur le test dédoublonné.
-- `data/raw/` et `data/processed/` sont gitignorés. Cache Hugging Face par défaut.
+- Columns: `text` (str), `label` (int 0-99); class names via `src/data.py::get_label_names()`.
+- Single-label, **100 highly imbalanced classes** → the reference metric is **macro-F1** (S01, S04).
+- **Chronological** split: test comes after train → temporal drift already included.
+- To check during EDA: **near-duplicates** between train and test (identical boilerplate clauses) → measure their
+  share and also report macro-F1 on the de-duplicated test set.
+- `data/raw/` and `data/processed/` are gitignored. Default Hugging Face cache.
 
-## Contrats d'interface (à respecter par les trois volets)
+## Interface contracts (to be respected by all three streams)
 
-Ces contrats permettent aux trois volets d'avancer en parallèle. Toute modification se discute en équipe et se
-note dans `AVANCEMENT.md`.
+These contracts let the three streams move forward in parallel. Any change is discussed as a team and logged in
+`PROGRESS.md`.
 
-1. **Données** : `from src.data import load_ledgar, get_label_names` — mêmes splits, mêmes ids de labels pour tous.
-   Ne jamais re-splitter le train/test.
-2. **Métriques** : `from src.metrics import classification_metrics, paired_bootstrap_f1, mcnemar_test` — personne ne
-   recode sa propre macro-F1.
-3. **Prédictions** : chaque modèle de classification écrit
-   `results/predictions/<run_id>_<split>.parquet` (gitignoré) avec les colonnes :
-   `idx` (position dans le split), `label`, `pred`, `proba_pred` (probabilité de la classe prédite),
-   `top5` (liste des 5 classes les plus probables). C'est l'entrée de l'audit (volet C) et des tests appariés.
-4. **Runs** : chaque run écrit `results/runs/<run_id>/` avec `config.json` (modèle, hyperparamètres, graine, versions)
-   et `metrics.json` (`macro_f1`, `micro_f1`, `accuracy`, `per_class_f1`, `train_time_s`, `n_trainable_params`).
-   `run_id` = `<model>_<variante>_<YYYYMMDD-HHMM>`, ex. `tfidf_logreg_base_20261015-1030`.
-5. **Retrieval** : `search(query: str, k: int = 5) -> list[dict]` avec `idx`, `text`, `label`, `label_name`, `score`.
+1. **Data**: `from src.data import load_ledgar, get_label_names` — same splits, same label ids for everyone.
+   Never re-split train/test.
+2. **Metrics**: `from src.metrics import classification_metrics, paired_bootstrap_f1, mcnemar_test` — nobody
+   re-implements their own macro-F1.
+3. **Predictions**: every classification model writes
+   `results/predictions/<run_id>_<split>.parquet` (gitignored) with the columns:
+   `idx` (position in the split), `label`, `pred`, `proba_pred` (probability of the predicted class),
+   `top5` (list of the 5 most probable classes). This is the input of the audit (stream C) and of the paired tests.
+4. **Runs**: every run writes `results/runs/<run_id>/` with `config.json` (model, hyperparameters, seed, versions)
+   and `metrics.json` (`macro_f1`, `micro_f1`, `accuracy`, `per_class_f1`, `train_time_s`, `n_trainable_params`).
+   `run_id` = `<model>_<variant>_<YYYYMMDD-HHMM>`, e.g. `tfidf_logreg_base_20261015-1030`.
+5. **Retrieval**: `search(query: str, k: int = 5) -> list[dict]` with `idx`, `text`, `label`, `label_name`, `score`.
 
-## Règles méthodologiques (issues du cours)
+## Methodological rules (from the course)
 
-- **Trois ensembles** : train pour apprendre, validation pour décider, test **une seule fois**. Toute décision prise
-  sur le test rend le score optimiste (S01).
-- **Macro-F1** comme métrique principale (classes déséquilibrées), plus F1 **par classe** et matrice de confusion (S01).
-- **Vocabulaire / TF-IDF / normalisation** ajustés sur le **train uniquement** (S04).
-- **Padding** : les pads ne doivent jamais compter — `pack_padded_sequence` ou pooling masqué pour le LSTM,
-  `attention_mask` pour les transformers, `ignore_index=-100` pour les labels par token (S04, S05).
-- **Toujours le tokeniser du modèle pré-entraîné** (`AutoTokenizer.from_pretrained(name)`) (S03).
-- **Fine-tuning** : lr 2e-5 à 5e-5, warmup 6-10 %, décroissance linéaire, 2-4 époques, weight decay 0.01,
-  `max_length` choisi d'après la distribution des longueurs en tokens (EDA). Attention à l'oubli catastrophique (S06).
-- **LoRA** : lr 1e-4 à 1e-3, α = 2r, cibles `query`/`value` (BERT) ou `q_lin`/`v_lin` (DistilBERT) ; la tête de
-  classification est entraînée entièrement (S06).
-- **transformers 5** : `eval_strategy`, `processing_class`, `warmup_steps=0.1` (ratio si < 1) (S06).
-- **Comparer deux modèles = test apparié** sur le même test set : McNemar (accuracy), bootstrap apparié (macro-F1).
-  Jamais deux scores côte à côte sans test (S06).
-- **Comparaison principale pré-enregistrée** dans le README : ne pas la modifier après coup.
-- **Embeddings de phrases** normalisés → cosinus = produit scalaire (S03).
+- **Three sets**: train to learn, validation to decide, test **only once**. Any decision taken on the test set makes
+  the score optimistic (S01).
+- **Macro-F1** as the main metric (imbalanced classes), plus **per-class** F1 and confusion matrix (S01).
+- **Vocabulary / TF-IDF / normalisation** fitted on the **training set only** (S04).
+- **Padding**: pads must never count — `pack_padded_sequence` or masked pooling for the LSTM, `attention_mask` for
+  transformers, `ignore_index=-100` for token labels (S04, S05).
+- **Always the pretrained model's own tokenizer** (`AutoTokenizer.from_pretrained(name)`) (S03).
+- **Fine-tuning**: lr 2e-5 to 5e-5, 6-10 % warmup, linear decay, 2-4 epochs, weight decay 0.01, `max_length` chosen
+  from the token-length distribution (EDA). Beware of catastrophic forgetting (S06).
+- **LoRA**: lr 1e-4 to 1e-3, α = 2r, targets `query`/`value` (BERT) or `q_lin`/`v_lin` (DistilBERT); the
+  classification head is fully trained (S06).
+- **transformers 5**: `eval_strategy`, `processing_class`, `warmup_steps=0.1` (a ratio when < 1) (S06).
+- **Comparing two models = paired test** on the same test set: McNemar (accuracy), paired bootstrap (macro-F1).
+  Never two scores side by side without a test (S06).
+- **Main comparison pre-registered** in the README: do not change it afterwards.
+- **Sentence embeddings** normalised → cosine = dot product (S03).
 
-## Reproductibilité
+## Reproducibility
 
-- `src.utils.set_seed(42)` en tête de chaque notebook / script.
-- Noter les versions exactes des modèles (nom HF + révision si possible) et des librairies dans `config.json`.
-- Les notebooks doivent tourner de haut en bas sur un clone propre ; les chemins passent par `src/config.py`.
-- Aucun secret dans le dépôt : `HF_TOKEN` éventuel dans `.env` (gitignoré), modèle dans `.env.example`.
+- `src.utils.set_seed(42)` at the top of every notebook / script.
+- Record the exact model versions (HF name + revision if possible) and library versions in `config.json`.
+- Notebooks must run top to bottom on a fresh clone; paths go through `src/config.py`.
+- No secrets in the repository: an optional `HF_TOKEN` goes in `.env` (gitignored), template in `.env.example`.
 
-## Environnement
+## Environment
 
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Python 3.11+
@@ -92,33 +92,33 @@ pip install -r requirements.txt
 jupyter lab
 ```
 
-- Entraînements lourds (BERT, LoRA, LSTM complet) : **Google Colab GPU** (T4 / L4 / A100).
-- EDA, TF-IDF, retrieval sur sous-ensemble, audit : en local.
-- Dans Colab : `!git clone`, `%cd`, `!pip install -r requirements.txt`, puis `import src`.
+- Heavy training (BERT, LoRA, full LSTM): **Google Colab GPU** (T4 / L4 / A100).
+- EDA, TF-IDF, retrieval on a subset, audit: locally.
+- In Colab: `!git clone`, `%cd`, `!pip install -r requirements.txt`, then `import src`.
 
 ## Git
 
-- Branche `main` = toujours fonctionnelle. Travail sur des branches `feat/<volet>-<sujet>`
-  (ex. `feat/b-tfidf-baseline`), fusion par Pull Request relue par un autre membre.
-- Commits en anglais, au présent, courts (`Add TF-IDF baseline and macro-F1 report`).
-- **Tags de jalons** demandés par le cours : `m1`, `m2`, `m3`, `m4`, puis `v1.0` à la livraison.
-- Ne jamais committer : données, checkpoints (`*.pt`, `*.safetensors`, `*.bin`), index, prédictions, `.env`,
-  supports de cours. Les **métriques** (`metrics.json`, CSV de synthèse) et **figures** sont versionnées.
-- Notebooks : vider les sorties volumineuses avant commit ; garder les tableaux et figures clés.
+- `main` branch = always working. Work on `feat/<stream>-<topic>` branches (e.g. `feat/b-tfidf-baseline`),
+  merged through a Pull Request reviewed by another member.
+- Commits in English, present tense, short (`Add TF-IDF baseline and macro-F1 report`).
+- **Milestone tags** required by the course: `m1`, `m2`, `m3`, `m4`, then `v1.0` at delivery.
+- Never commit: data, checkpoints (`*.pt`, `*.safetensors`, `*.bin`), indexes, predictions, `.env`, course
+  materials. **Metrics** (`metrics.json`, summary CSVs) and **figures** are versioned.
+- Notebooks: clear large outputs before committing; keep the key tables and figures.
 
 ## Workflow
 
-1. **Planifier d'abord** : toute tâche non triviale (3+ étapes) → plan dans `tasks/todo.md` avant d'implémenter.
-2. **Vérifier** : un résultat n'est écrit dans `AVANCEMENT.md` / README que s'il a été réellement obtenu.
-   Ne jamais remplacer un résultat par une hypothèse.
-3. **Apprendre** : après toute correction, ajouter une ligne dans `tasks/lessons.md`
-   (`[date] | ce qui a mal tourné | règle pour l'éviter`).
-4. **Mettre à jour `AVANCEMENT.md`** après chaque étape significative (fait, résultat chiffré, problème, solution,
-   prochaine action).
-5. **Standard** : « est-ce qu'un staff engineer validerait ça ? » Simplicité d'abord, causes racines, pas de bricolage.
+1. **Plan first**: any non-trivial task (3+ steps) → plan in `tasks/todo.md` before implementing.
+2. **Verify**: a result is written in `PROGRESS.md` / README only if it was actually obtained.
+   Never replace a result with an assumption.
+3. **Learn**: after any correction, add a line to `tasks/lessons.md`
+   (`[date] | what went wrong | rule to avoid it`).
+4. **Update `PROGRESS.md`** after every significant step (what was done, numeric result, problem, solution,
+   next action).
+5. **Standard**: "would a staff engineer approve this?" Simplicity first, root causes, no hacks.
 
-## Principes
+## Principles
 
-- DRY : la logique répétée va dans `src/`, les notebooks racontent l'histoire et appellent `src/`.
-- Ne jamais supposer : vérifier chemins, APIs, noms de paramètres (transformers 5 a renommé plusieurs arguments).
-- Toujours rapporter les limites : un échec documenté vaut mieux qu'un succès non vérifiable.
+- DRY: repeated logic goes into `src/`; notebooks tell the story and call `src/`.
+- Never assume: check paths, APIs, parameter names (transformers 5 renamed several arguments).
+- Always report limitations: a documented failure is worth more than an unverifiable success.

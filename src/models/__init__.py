@@ -1,6 +1,6 @@
-"""Modèles de classification de clauses.
+"""Clause classification models.
 
-Volet B (Amandine) : baseline TF-IDF + régression logistique, LSTM / BiLSTM (packing, GloVe).
-Volet A (Robin)    : fine-tuning Hugging Face (full) et LoRA.
-Chaque modèle écrit ses runs et prédictions via src.utils.save_run / save_predictions.
+Stream B (Amandine): TF-IDF + logistic regression baseline, LSTM / BiLSTM (packing, GloVe).
+Stream A (Robin)   : Hugging Face fine-tuning (full) and LoRA.
+Every model writes its runs and predictions through src.utils.save_run / save_predictions.
 """

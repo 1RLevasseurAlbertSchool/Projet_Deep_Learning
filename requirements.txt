@@ -1,13 +1,13 @@
 # Python 3.11+
-# Cœur deep learning
+# Deep learning core
 torch>=2.4
-transformers>=5.0          # noms transformers 5 : eval_strategy, processing_class
+transformers>=5.0          # transformers 5 names: eval_strategy, processing_class
 accelerate>=1.0
 datasets>=3.0
 peft>=0.13
 sentence-transformers>=3.0
 
-# ML classique, métriques, statistiques
+# Classical ML, metrics, statistics
 scikit-learn>=1.5
 scipy>=1.13
 numpy>=1.26

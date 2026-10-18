@@ -1,8 +1,8 @@
 # data/
 
-Dossier non versionné (sauf ce fichier). LEDGAR est téléchargé automatiquement depuis le Hub Hugging Face
-par `src/data.py::load_ledgar()` (cache Hugging Face).
+Unversioned folder (except this file). LEDGAR is downloaded automatically from the Hugging Face Hub
+by `src/data.py::load_ledgar()` (Hugging Face cache).
 
-- `raw/` : exports éventuels des données sources ;
-- `processed/` : jeux dérivés (dédoublonnage, sous-ensembles d'audit…) ;
-- `indexes/` : embeddings et index de recherche mis en cache.
+- `raw/`: optional exports of the source data;
+- `processed/`: derived sets (de-duplication, audit subsets…);
+- `indexes/`: cached embeddings and search indexes.

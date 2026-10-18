@@ -1,73 +1,73 @@
-# Model card — Clause Review Assistant (cœur NLP)
+# Model card — Clause Review Assistant (NLP core)
 
-> Squelette créé le 14/10/2026. Les sections chiffrées sont remplies **uniquement** à partir des résultats de
-> `results/` (volet C, tâche C9). Les phrases marquées *(provisoire)* sont à confirmer ou corriger par l'audit.
+> Skeleton created on 14/10/2026. The quantified sections are filled **only** from the results in `results/`
+> (stream C, task C9). Sentences marked *(provisional)* are to be confirmed or corrected by the audit.
 
 ## 1. Description
 
 | | |
 |---|---|
-| Composants | (1) classifieur de type de clause, 100 classes LEDGAR ; (2) moteur de recherche de clauses similaires |
-| Modèle de classification | *à compléter (nom HF, révision, full FT ou LoRA)* |
-| Modèle d'embedding | *à compléter* |
-| Données d'entraînement | LEDGAR / LexGLUE : 60 000 clauses de contrats déposés à la SEC (EDGAR), 2016-2017 |
-| Langue | Anglais (juridique, États-Unis) |
-| Équipe | Robin, Amandine, Brian — Albert School, octobre 2026 |
+| Components | (1) clause-type classifier, 100 LEDGAR classes; (2) similar-clause search engine |
+| Classification model | *to be completed (HF name, revision, full FT or LoRA)* |
+| Embedding model | *to be completed* |
+| Training data | LEDGAR / LexGLUE: 60,000 clauses from contracts filed with the SEC (EDGAR), 2016-2017 |
+| Language | English (legal, United States) |
+| Team | Robin, Amandine, Brian — Albert School, October 2026 |
 
-## 2. Usage prévu
+## 2. Intended use
 
-- Pré-étiqueter le type de chaque clause pendant une due diligence, **pour accélérer** la revue d'un juriste.
-- Proposer des clauses comparables de la banque de clauses du cabinet.
-- Signaler les clauses à faible confiance pour une **revue humaine prioritaire**.
+- Pre-label the type of every clause during a due diligence, **to speed up** a lawyer's review.
+- Suggest comparable clauses from the firm's clause bank.
+- Flag low-confidence clauses for **priority human review**.
 
-## 3. Usages interdits ou déconseillés *(provisoire)*
+## 3. Prohibited or discouraged uses *(provisional)*
 
-- Avis juridique, appréciation de la validité, de l'opposabilité ou du caractère abusif d'une clause.
-- Clauses **non anglaises** (français, allemand…) ou rédigées selon des usages très différents des contrats SEC.
-- Décision automatique sans relecture humaine (classement d'un contrat comme « conforme », par exemple).
-- Types de clauses absents des 100 classes : le modèle choisira quand même une classe connue.
-- Documents entiers : le système travaille clause par clause.
+- Legal advice, assessment of the validity, enforceability or unfairness of a clause.
+- **Non-English** clauses (French, German…) or clauses drafted with practices very different from SEC contracts.
+- Automatic decisions without human review (e.g. marking a contract as "compliant").
+- Clause types absent from the 100 classes: the model will still pick a known class.
+- Whole documents: the system works clause by clause.
 
-## 4. Performances globales
+## 4. Overall performance
 
-| Métrique (test 2019) | Valeur | IC 95 % |
+| Metric (2019 test set) | Value | 95 % CI |
 |---|---:|---:|
 | Macro-F1 | | |
 | Accuracy (micro-F1) | | |
-| Macro-F1, test dédoublonné | | |
+| Macro-F1, de-duplicated test set | | |
 
-## 5. Performances par tranche
+## 5. Per-slice performance
 
-| Tranche | Macro-F1 | Support | Commentaire |
+| Slice | Macro-F1 | Support | Comment |
 |---|---:|---:|---|
-| Classes fréquentes (tête) | | | |
-| Classes rares (queue) | | | |
-| Clauses courtes / longues | | | |
-| Type de partie : Borrower / Lender | | | |
-| Type de partie : Employer / Employee | | | |
-| Type de partie : Landlord / Tenant | | | |
+| Frequent classes (head) | | | |
+| Rare classes (tail) | | | |
+| Short / long clauses | | | |
+| Party type: Borrower / Lender | | | |
+| Party type: Employer / Employee | | | |
+| Party type: Landlord / Tenant | | | |
 
-## 6. Robustesse et biais
+## 6. Robustness and bias
 
-| Perturbation | Taux de changement de prédiction | Variation de confiance |
+| Perturbation | Prediction flip rate | Confidence change |
 |---|---:|---:|
-| Échange des rôles de parties | | |
-| Pronoms he ↔ she | | |
-| Juridiction (New York → Luxembourg…) | | |
-| Devise (USD → EUR) | | |
-| Clauses de style européen | | |
-| Clauses en français | | |
+| Swapping party roles | | |
+| Pronouns he ↔ she | | |
+| Jurisdiction (New York → Luxembourg…) | | |
+| Currency (USD → EUR) | | |
+| European-style clauses | | |
+| French clauses | | |
 
-## 7. Calibration et seuil de revue humaine
+## 7. Calibration and human review threshold
 
-*Diagramme de fiabilité, ECE, couverture et précision au-dessus du seuil retenu.*
+*Reliability diagram, ECE, coverage and precision above the selected threshold.*
 
-## 8. Limites connues
+## 8. Known limitations
 
-- Pas de métadonnée « type de contrat » dans LEDGAR : la ventilation par contrat repose sur un proxy (rôles des
-  parties détectés par règles).
-- Split chronologique : les performances futures peuvent baisser avec l'évolution des pratiques de rédaction.
+- No "contract type" metadata in LEDGAR: the per-contract breakdown relies on a proxy (party roles detected by
+  rules).
+- Chronological split: future performance may drop as drafting practices evolve.
 
-## 9. Reproductibilité
+## 9. Reproducibility
 
-Graine 42 ; configuration et versions de chaque run dans `results/runs/<run_id>/config.json`.
+Seed 42; configuration and versions of every run in `results/runs/<run_id>/config.json`.

@@ -12,11 +12,11 @@ venv/
 # Secrets
 .env
 
-# Données (téléchargées par src/data.py)
+# Data (downloaded by src/data.py)
 data/*
 !data/README.md
 
-# Modèles, checkpoints, index
+# Models, checkpoints, indexes (root-level folders only: do not ignore src/models/)
 /models/
 /checkpoints/
 /outputs/
@@ -29,12 +29,12 @@ data/*
 *.faiss
 *.npy
 
-# Résultats volumineux (les métriques JSON/CSV et les figures restent versionnées)
+# Large results (JSON/CSV metrics and figures stay versioned)
 results/predictions/
 wandb/
 runs/*/events*
 
-# Supports de cours (non redistribués)
+# Course materials (not redistributed)
 docs/ressources_methodologie/
 
 # OS / IDE

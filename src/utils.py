@@ -1,4 +1,4 @@
-"""Utilitaires : graine, sauvegarde des runs et des prédictions au format commun (voir CLAUDE.md)."""
+"""Utilities: seed, saving runs and predictions in the common format (see CLAUDE.md)."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def _versions() -> dict:
 
 
 def save_run(run_id: str, config: dict, metrics: dict) -> None:
-    """Écrit results/runs/<run_id>/config.json (+ versions) et metrics.json."""
+    """Write results/runs/<run_id>/config.json (+ versions) and metrics.json."""
     run_dir = RUNS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     config = {**config, "seed": config.get("seed", SEED), "versions": _versions()}
@@ -50,9 +50,9 @@ def save_run(run_id: str, config: dict, metrics: dict) -> None:
 
 
 def save_predictions(run_id: str, split: str, labels, preds, probas) -> None:
-    """Écrit results/predictions/<run_id>_<split>.parquet au format commun.
+    """Write results/predictions/<run_id>_<split>.parquet in the common format.
 
-    `probas` : tableau (n, 100) de probabilités ; on en déduit proba_pred et top5.
+    `probas`: (n, 100) array of probabilities; proba_pred and top5 are derived from it.
     """
     import pandas as pd
 

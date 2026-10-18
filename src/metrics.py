@@ -1,8 +1,8 @@
-"""Métriques et tests appariés partagés (S01, S04, S06).
+"""Shared metrics and paired tests (S01, S04, S06).
 
-- `classification_metrics` : macro-F1 (métrique principale), micro-F1 (= accuracy en mono-label), F1 par classe.
-- `paired_bootstrap_f1`   : IC à 95 % de la différence de macro-F1 entre deux modèles sur le même test set.
-- `mcnemar_test`          : test de McNemar sur les désaccords (accuracy), exact si b + c < 25.
+- `classification_metrics`: macro-F1 (main metric), micro-F1 (= accuracy for single-label), per-class F1.
+- `paired_bootstrap_f1`   : 95 % CI of the macro-F1 difference between two models on the same test set.
+- `mcnemar_test`          : McNemar test on the disagreements (accuracy), exact if b + c < 25.
 """
 
 from __future__ import annotations
@@ -26,10 +26,10 @@ def classification_metrics(y_true, y_pred, num_labels: int | None = None) -> dic
 
 def paired_bootstrap_f1(y_true, pred_a, pred_b, n_boot: int = 1000, seed: int = 42,
                         num_labels: int | None = None) -> dict:
-    """Bootstrap apparié : on rééchantillonne les MÊMES exemples pour A et B (S06).
+    """Paired bootstrap: the SAME examples are resampled for A and B (S06).
 
-    Retourne la différence observée F1(A) - F1(B), l'IC à 95 % (percentiles 2.5 / 97.5)
-    et la part des rééchantillonnages où A ne bat pas B.
+    Returns the observed difference F1(A) - F1(B), the 95 % CI (2.5 / 97.5 percentiles)
+    and the share of resamples where A does not beat B.
     """
     y_true, pred_a, pred_b = map(np.asarray, (y_true, pred_a, pred_b))
     labels = np.arange(num_labels) if num_labels is not None else np.unique(y_true)
@@ -56,9 +56,9 @@ def paired_bootstrap_f1(y_true, pred_a, pred_b, n_boot: int = 1000, seed: int = 
 
 
 def mcnemar_test(y_true, pred_a, pred_b) -> dict:
-    """McNemar avec correction de continuité ; binomial exact si b + c < 25 (S06).
+    """McNemar with continuity correction; exact binomial if b + c < 25 (S06).
 
-    b = A juste et B faux, c = A faux et B juste.
+    b = A right and B wrong, c = A wrong and B right.
     """
     y_true, pred_a, pred_b = map(np.asarray, (y_true, pred_a, pred_b))
     ok_a, ok_b = pred_a == y_true, pred_b == y_true
