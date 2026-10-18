@@ -18,16 +18,16 @@
 
 | ID | Task | Deliverable | Date | Depends on |
 |---|---|---|---|---|
-| A1 | Generic HF script: tokenisation (model's tokenizer), `Trainer`, `compute_metrics` (macro-F1), saving run + predictions in the common format | `src/models/transformer.py`, `scripts/train_transformer.py` | Thu 15/10 | B1 |
-| A2 | DistilBERT smoke test on 2,000 examples (loss goes down, not a single predicted class) | `results/runs/distilbert_smoke_*` | Thu 15/10 | A1 |
-| A3 | Set `max_length` (256 / 512) from the token lengths | decision in `PROGRESS.md` | Thu 15/10 | B3 |
-| A4 | DistilBERT on the full training set, **validation** evaluation | run + loss / macro-F1 curves | Fri 16/10 | A2 |
-| A5 | Screening `nlpaueb/legal-bert-base-uncased` and/or `microsoft/deberta-v3-base` (validation) | screening table | Sat 17/10 | A4 |
-| A6 | Choice of the final model **on validation**, final run, **single test evaluation** | `results/runs/<final>/`, test predictions | Sun 18/10 | A5 |
-| A7 | LoRA (r = 4, 8, 16; α = 2r; query/value) on the same encoder | trade-off table (params, time, memory, macro-F1) | Mon 19/10 | A6 |
-| A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM | `results/paired_tests.csv` → **tag m4** | Mon 19/10 | A6, A7, B4, B6 |
-| A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision) | figure + table | Tue 20/10 | A6 |
-| A10 | README results section, PR reviews, tag `v1.0`, test on a fresh clone | final README | Thu 22/10 | all |
+| [x] A1 | Generic HF script: tokenisation (model's tokenizer), `Trainer`, `compute_metrics` (macro-F1), saving run + predictions in the common format | `src/models/transformer.py`, `scripts/train_transformer.py` | Thu 15/10 | B1 |
+| [x] A2 | DistilBERT smoke test on 2,000 examples (loss goes down, not a single predicted class) | `results/runs/distilbert_smoke_*` | Thu 15/10 | A1 |
+| [x] A3 | Set `max_length` (256 / 512) from the token lengths | decision in `PROGRESS.md` | Thu 15/10 | B3 |
+| [ ] A4 | DistilBERT on the full training set, **validation** evaluation | run + loss / macro-F1 curves | Fri 16/10 | A2 |
+| [ ] A5 | Screening `nlpaueb/legal-bert-base-uncased` and/or `microsoft/deberta-v3-base` (validation) | screening table | Sat 17/10 | A4 |
+| [ ] A6 | Choice of the final model **on validation**, final run, **single test evaluation** | `results/runs/<final>/`, test predictions | Sun 18/10 | A5 |
+| [ ] A7 | LoRA (r = 4, 8, 16; α = 2r; query/value) on the same encoder | trade-off table (params, time, memory, macro-F1) | Mon 19/10 | A6 |
+| [ ] A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM | `results/paired_tests.csv` → **tag m4** | Mon 19/10 | A6, A7, B4, B6 |
+| [ ] A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision) | figure + table | Tue 20/10 | A6 |
+| [ ] A10 | README results section, PR reviews, tag `v1.0`, test on a fresh clone | final README | Thu 22/10 | all |
 
 ## Stream B — Amandine: Data, baselines, RNN
 

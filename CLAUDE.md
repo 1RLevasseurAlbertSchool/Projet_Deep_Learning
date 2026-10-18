@@ -54,7 +54,30 @@ These contracts let the three streams move forward in parallel. Any change is di
    `idx` (position in the split), `label`, `pred`, `proba_pred` (probability of the predicted class),
    `top5` (list of the 5 most probable classes). This is the input of the audit (stream C) and of the paired tests.
 4. **Runs**: every run writes `results/runs/<run_id>/` with `config.json` (model, hyperparameters, seed, versions)
-   and `metrics.json` (`macro_f1`, `micro_f1`, `accuracy`, `per_class_f1`, `train_time_s`, `n_trainable_params`).
+   and `metrics.json`:
+   - one block per evaluated split: `"validation"` (always) and `"test"` (only for the single test evaluation of
+     a final model), each with `macro_f1`, `micro_f1`, `accuracy`, `per_class_f1` (100 values, in label-id order);
+   - at the top level: `train_time_s`, `n_trainable_params`, `n_total_params`, `peak_gpu_memory_mb` (`null`
+     without CUDA) and `history` (`train`: training loss per logged step; `validation`: loss, macro-F1 and
+     accuracy per evaluation). Keys that do not apply to a model are `null`.
+
+   Example (`distilbert_smoke_20261018-1823`, abridged and rounded; a run with `--eval-test` adds a `"test"` block
+   with the same keys as `"validation"`):
+
+   ```json
+   {
+     "train_time_s": 59.2,
+     "n_trainable_params": 67030372,
+     "n_total_params": 67030372,
+     "peak_gpu_memory_mb": null,
+     "validation": {"macro_f1": 0.0272, "micro_f1": 0.1845, "accuracy": 0.1845, "per_class_f1": [0.0, 0.0, 0.0]},
+     "history": {
+       "train": [{"step": 2, "epoch": 0.03, "loss": 4.623}],
+       "validation": [{"step": 63, "epoch": 1.0, "loss": 4.085, "macro_f1": 0.0272, "accuracy": 0.1845}]
+     }
+   }
+   ```
+
    `run_id` = `<model>_<variant>_<YYYYMMDD-HHMM>`, e.g. `tfidf_logreg_base_20261015-1030`.
 5. **Retrieval**: `search(query: str, k: int = 5) -> list[dict]` with `idx`, `text`, `label`, `label_name`, `score`.
 
