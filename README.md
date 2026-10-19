@@ -130,7 +130,7 @@ upgrade the `ipykernel` / `jupyter-client` versions pinned by `google-colab`), t
 ├── notebooks/             # Numbered notebooks, read in order (00 → 06)
 ├── src/
 │   ├── config.py          # Paths, seed, dataset name, shared constants
-│   ├── data.py            # LEDGAR loading + label names (shared interface contract)
+│   ├── data.py            # LEDGAR loading + label names + head/middle/tail groups (shared contract)
 │   ├── metrics.py         # Macro-F1, per-class F1, paired bootstrap, McNemar
 │   ├── utils.py           # Seed, saving runs
 │   ├── calibration.py     # Stream A: ECE, reliability diagram, human-review threshold

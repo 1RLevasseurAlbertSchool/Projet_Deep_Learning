@@ -15,7 +15,9 @@ accuracy 0.8717**. Team now works directly on `main` (no feature branches).
 LoRA path (A7) implemented and checked locally (Legal-BERT r=8: 371,812 trainable parameters, 0.34 % of full FT).
 Calibration (A9): the final model is over-confident (test ECE 0.0425, mean confidence 0.9131 for accuracy 0.8717);
 human-review threshold 0.892 chosen on validation → **78.9 % of the test clauses handled automatically at precision
-0.9489**.
+0.9489**. Per class at that threshold: 11 classes below 0.90 precision (9 with ≥ 20 automatic labels), not mostly tail
+(4 tail, 5 middle, 2 head); rare classes pay in coverage and hidden errors instead (tail clauses 63.2 % automatic vs
+88.4 % head, and 14.2 % of the automatic ones wrong vs 2.6 %).
 **Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8); LoRA r=8 run on
 Colab (A7) and MiniLM index (C) in parallel.**
 
@@ -61,7 +63,8 @@ Colab (A7) and MiniLM index (C) in parallel.**
 - [x] Encoder screening on the validation set (DistilBERT vs Legal-BERT, 19/10).
 - [x] Final full fine-tuning run + single test evaluation (`legal-bert_final_20261019-1523`, 19/10).
 - [x] LoRA path (`--lora-r`) + trade-off table script, checked locally (19/10).
-- [x] Calibration (ECE, reliability diagram) + human-review threshold of the final model (A9, 19/10).
+- [x] Calibration (ECE, reliability diagram) + human-review threshold of the final model (A9, 19/10), with the
+  per-class precision at the recommended threshold (head / middle / tail).
 - [ ] LoRA runs + trade-off table.
 - [ ] Paired tests (main comparison + secondary ones).
 - [ ] Tag `m4`.
@@ -202,11 +205,63 @@ threshold); 95 % Wilson interval on test.
   let the model label 7,888 of them (78.9 %) on its own, 94.9 % of them correctly [95 % CI 94.4 %; 95.4 %], and send
   2,112 to a lawyer; those 2,112 contain 68.6 % of the model's errors, while 403 wrong labels (5.1 % of the automatic
   ones) would go through unreviewed.
+
+**Per class at the recommended threshold (test).**
+`python scripts/calibration_per_class.py --run-id legal-bert_final_20261019-1523` →
+`results/calibration_per_class_legal-bert_final_20261019-1523.csv` (one row per class),
+`results/figures/precision_per_class_at_threshold.png`. The threshold 0.892 is read from the calibration JSON (chosen
+on validation); nothing is selected on test. Per class: `support` (test clauses of the class), `share_auto` (share of
+them labelled automatically), `precision_auto` = precision of the automatic labels of the class (share of the clauses
+labelled automatically *as* that class that truly belong to it, as in sklearn; 95 % Wilson interval), `reliable` = at
+least 20 such automatic labels. Frequency group = tercile of the class's training-set count
+(`src.data.frequency_groups`): tail 23–341, middle 345–569, head 578–3,167 training clauses.
+
+| Group | Classes | Test support | Share labelled automatically | Precision of the automatic labels (pooled) | Classes never labelled automatically | Unreliable (< 20 automatic labels) | Below 0.90 (of which reliable) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Tail | 34 | 1,283 | 63.2 % | 0.9482 | 13 | 17 | 4 (2) |
+| Middle | 33 | 2,367 | 61.9 % | 0.9465 | 4 | 7 | 5 (5) |
+| Head | 33 | 6,350 | 88.4 % | 0.9496 | 0 | 0 | 2 (2) |
+
+| Class below 0.90 | Group | Train clauses | Test support | Share labelled automatically | Automatic labels | Precision [95 % CI] | Reliable |
+|---|---|---:|---:|---:|---:|---:|---|
+| Effectiveness | tail | 229 | 31 | 25.8 % | 8 | 0.750 [0.409; 0.929] | no |
+| Authority | middle | 549 | 62 | 38.7 % | 26 | 0.808 [0.621; 0.915] | yes |
+| Payments | head | 856 | 126 | 88.9 % | 127 | 0.827 [0.752; 0.883] | yes |
+| Agreements | tail | 252 | 48 | 47.9 % | 19 | 0.842 [0.624; 0.945] | no |
+| Representations | middle | 569 | 94 | 35.1 % | 33 | 0.848 [0.691; 0.933] | yes |
+| Miscellaneous | middle | 479 | 79 | 53.2 % | 27 | 0.852 [0.675; 0.941] | yes |
+| Binding Effects | head | 588 | 126 | 44.4 % | 60 | 0.867 [0.758; 0.931] | yes |
+| Specific Performance | tail | 326 | 43 | 65.1 % | 31 | 0.871 [0.711; 0.949] | yes |
+| Vesting | middle | 451 | 87 | 89.7 % | 87 | 0.885 [0.801; 0.936] | yes |
+| Consents | middle | 444 | 81 | 64.2 % | 53 | 0.887 [0.774; 0.947] | yes |
+| Employment | tail | 308 | 47 | 53.2 % | 27 | 0.889 [0.719; 0.961] | yes |
+
+- **11 of the 83 classes with at least one automatic label fall below 0.90 precision**, 9 of them with ≥ 20
+  automatic labels (Authority, Payments, Representations, Miscellaneous, Binding Effects, Specific Performance,
+  Vesting, Consents, Employment); Effectiveness (8) and Agreements (19) are unreliable. Authorizations sits exactly
+  at 0.900; 45 classes reach 0.95.
+- **They are not mostly tail classes**: 4 tail (2 of them unreliable), 5 middle, 2 head — 2 tail among the 9
+  reliable ones. The pooled precision is the same in the three groups (0.948 / 0.946 / 0.950).
+- **Only Payments is clearly below 0.90**: its whole 95 % interval lies below 0.90 ([0.752; 0.883]); 22 of its 127 automatic
+  labels go to clauses of other classes. The 10 other intervals contain 0.90: with 8 to 87 automatic labels per
+  class, "below 0.90" is an estimate, not an established fact.
+- **Rarity costs coverage and hidden errors, not precision.** Tail clauses are labelled automatically less often
+  (63.2 % vs 88.4 % for head). 17 classes (13 tail, 4 middle) are never predicted at or above the threshold, so their
+  precision is undefined (not drawn); their clauses are not protected for all that: 74 of their 586 test clauses still
+  pass automatically, all under a wrong label (Applicable Laws: 34 of 53). Counting errors by the **true** class
+  (`n_auto − n_auto_correct`), 115 of the 811 tail clauses labelled automatically are wrong (14.2 %), vs 140 of 1,466
+  (9.5 %) middle and 148 of 5,611 (2.6 %) head; 290 of the 403 automatic errors carry a head-class label. The model
+  rarely predicts a rare class with confidence, but confidently gives rare-class clauses a wrong, mostly frequent,
+  label — which a per-class precision cannot show.
+- **Consequence**: the global threshold delivers ≈ 0.95 on average and in each frequency group, not in each class.
+  Per-class (or per-group) thresholds would have to be chosen on validation, never on these test numbers, and would
+  be noisy: 24 classes have fewer than 20 automatic labels on test.
 - **Limitations**: (1) no temperature scaling — the common prediction format stores only `proba_pred` and `top5`, not
   the full probability matrix (or logits) that temperature scaling is fitted on; (2) top-label calibration only: it
   says nothing about the 99 other probabilities, nor about the reliability of the `top5` suggestions; (3) one global
-  threshold for the 100 classes: the precision per class at that threshold was not measured (rare classes may sit
-  well below 0.95); (4) the ECE depends on the binning, and 72-73 % of the clauses fall in the last of the 15 bins.
+  threshold for the 100 classes: the per-class precision above rests on 0 to 545 automatic labels per class, and it
+  was measured on test only after the threshold was fixed; (4) the ECE depends on the binning, and 72-73 % of the
+  clauses fall in the last of the 15 bins.
 
 ## 4. Problems met and solutions
 
@@ -242,6 +297,8 @@ before the first push.
    r = 4 and r = 16 only if GPU time allows.
 6. Team: confirm the `metrics.json` layout per split (see the 18/10 log entry) before B5 writes its first run.
 7. Parallel work: B2-B5 (EDA, TF-IDF), C1-C3 (index, queries).
+8. Brian: C6 / C8 — take the head / middle / tail slice from `src.data.frequency_groups` (already used by A9) so that
+   the audit and the calibration report the same groups.
 
 ## 6. Rule for updating this file
 
@@ -252,6 +309,25 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 19 October 2026 — stream A: per-class view of the human-review threshold (A9, Robin)
+
+- **Code**: `src.data.frequency_groups` (training count and head / middle / tail group of every class, terciles of the
+  per-class training counts with `pd.qcut`: 34 / 33 / 33 classes on LEDGAR) — shared definition, to be reused by
+  the audit slices (C6, C8); `src.calibration.per_class_operating_point` (per class at a fixed threshold: support,
+  share labelled automatically, precision of the automatic labels per predicted class + Wilson interval, reliable
+  flag) and `per_class_precision_figure`. CLI: `scripts/calibration_per_class.py --run-id <run>`.
+- **Protocol**: the threshold is read from `results/calibration_<run_id>.json` (recommended target 0.95, chosen on
+  validation) and applied to the test predictions; the script checks that the per-class counts add up to the global
+  operating point (7,888 automatic clauses) and that the labels match the LEDGAR test split.
+- **Result** (`results/calibration_per_class_legal-bert_final_20261019-1523.csv`,
+  `results/figures/precision_per_class_at_threshold.png`): 11 classes below 0.90 precision, 9 of them with ≥ 20
+  automatic labels; 4 tail, 5 middle, 2 head, so not mostly tail. Only Payments has its whole 95 % interval below
+  0.90. Rare classes pay elsewhere: 17 classes (13 tail) are never predicted at or above the threshold, and 14.2 % of
+  the tail clauses labelled automatically are wrong vs 2.6 % for head. Details in section 3.
+- **Tests**: 2 new in `tests/test_calibration.py` (per-class counts by true and predicted class on a hand-checked
+  example; per-class counts add up to the global operating point; figure written), 2 in `tests/test_data.py`
+  (tercile groups, equal counts kept together, label check). `python -m pytest -q` → 31 passed.
 
 ### 19 October 2026 — stream A: calibration and human-review threshold (A9, Robin)
 

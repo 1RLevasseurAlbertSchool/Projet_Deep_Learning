@@ -106,6 +106,46 @@ def operating_point(confidences, correct, threshold: float) -> dict:
     }
 
 
+def per_class_operating_point(labels, preds, confidences, threshold: float, num_labels: int,
+                              min_auto: int = 20) -> pd.DataFrame:
+    """Per class at a fixed threshold: share of its clauses labelled automatically, precision of its automatic labels.
+
+    One row per class id (0 to `num_labels` - 1):
+    - `support`: clauses whose true class is c; `n_auto` / `share_auto`: those labelled automatically (confidence >=
+      threshold), as a count and as a share of `support` (NaN when the support is 0);
+    - `n_auto_pred`: clauses labelled automatically AS c, whatever their true class; `n_auto_correct`: those whose true
+      class is c; `precision_auto` = n_auto_correct / n_auto_pred (NaN when 0), with its 95 % Wilson interval;
+    - `reliable`: at least `min_auto` automatic labels of the class (`n_auto_pred`) behind the precision.
+
+    Precision is per predicted class (as in sklearn): it answers "when the model labels a clause c without review, how
+    often is it right". Summed over the classes, the counts give the global operating point.
+    """
+    labels, preds = np.asarray(labels, dtype=int), np.asarray(preds, dtype=int)
+    confidences, correct = _as_arrays(confidences, labels == preds)
+    auto = confidences >= threshold
+
+    def count(values):
+        return np.bincount(values, minlength=num_labels)
+
+    support, n_auto = count(labels), count(labels[auto])
+    n_auto_pred, n_auto_correct = count(preds[auto]), count(preds[auto & correct])
+    cis = [stats.binomtest(int(k), int(n)).proportion_ci(method="wilson") if n else None
+           for k, n in zip(n_auto_correct, n_auto_pred)]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return pd.DataFrame({
+            "label": np.arange(num_labels),
+            "support": support,
+            "n_auto": n_auto,
+            "share_auto": n_auto / support,
+            "n_auto_pred": n_auto_pred,
+            "n_auto_correct": n_auto_correct,
+            "precision_auto": n_auto_correct / n_auto_pred,
+            "precision_ci95_low": [np.nan if ci is None else ci.low for ci in cis],
+            "precision_ci95_high": [np.nan if ci is None else ci.high for ci in cis],
+            "reliable": n_auto_pred >= min_auto,
+        })
+
+
 def calibration_summary(confidences, correct, n_bins: int = 15) -> dict:
     """Accuracy, mean confidence, their gap (> 0 = over-confident on average), ECE and bins of one split."""
     confidences, correct = _as_arrays(confidences, correct)
@@ -221,6 +261,87 @@ def coverage_precision_figure(splits: dict, operating_points: list[dict], path, 
     if title:
         ax.set_title(title, color=INK, fontsize=11, loc="left")
     fig.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=150, facecolor=SURFACE)
+    plt.close(fig)
+
+
+def per_class_precision_figure(table: pd.DataFrame, path, min_auto: int = 20, precision_floor: float = 0.90,
+                               overall_precision: float | None = None, title: str | None = None) -> None:
+    """Precision of the automatic labels per class vs training-set frequency (log scale), one dot per class.
+
+    `table`: `per_class_operating_point(...)` merged with `src.data.frequency_groups(...)` and a `label_name` column.
+    Hollow dots: unreliable precision (fewer than `min_auto` clauses labelled automatically as the class). Classes
+    below `precision_floor` are named, in a column sorted like their dots. Classes without any automatic label have no
+    precision: counted in a note, not drawn.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from matplotlib.ticker import FuncFormatter, LogLocator
+
+    drawn = table.dropna(subset=["precision_auto"]).assign(reliable=lambda df: df["n_auto_pred"] >= min_auto)
+    low = min(precision_floor, drawn["precision_auto"].min())
+    ylim = (np.floor(low * 20) / 20 - 0.05, 1.01)
+    fig, ax = plt.subplots(figsize=(8.5, 5.8), facecolor=SURFACE)
+    ax.set_xscale("log")
+    xlim = (table["train_count"].min() / 1.6, table["train_count"].max() * 1.6)
+    ax.set(xlim=xlim, ylim=ylim)
+
+    # frequency groups: boundary halfway (log) between the last class of a group and the first of the next one
+    groups = table.groupby("frequency_group", observed=True)["train_count"].agg(["min", "max", "size"])
+    for (_, lower), (_, upper) in zip(groups.iloc[:-1].iterrows(), groups.iloc[1:].iterrows()):
+        ax.axvline(np.sqrt(lower["max"] * upper["min"]), color=BASELINE, linewidth=1, linestyle="--", zorder=1)
+    for name, row in groups.iterrows():
+        ax.text(np.sqrt(row["min"] * row["max"]), 1.01, f"{name} ({row['size']} classes)", ha="center",
+                va="bottom", fontsize=8.5, color=INK_SECONDARY, transform=ax.get_xaxis_transform())
+
+    ax.axhline(precision_floor, color=INK_MUTED, linewidth=1, zorder=1)
+    ax.text(xlim[0] * 1.08, precision_floor + 0.003, f"precision {precision_floor:.2f}", fontsize=8, va="bottom",
+            color=INK_SECONDARY)
+    if overall_precision is not None:
+        ax.axhline(overall_precision, color=BASELINE, linewidth=1, linestyle=":", zorder=1)
+        ax.text(xlim[0] * 1.08, overall_precision + 0.003, f"all classes {overall_precision:.3f}", fontsize=8,
+                va="bottom", color=INK_SECONDARY)
+
+    for reliable, face in ((True, SERIES_COLORS[0]), (False, SURFACE)):
+        part = drawn[drawn["reliable"] == reliable]
+        ax.scatter(part["train_count"], part["precision_auto"], s=42, facecolor=face, zorder=3,
+                   edgecolor=SERIES_COLORS[0] if not reliable else SURFACE, linewidth=1.5 if not reliable else 1)
+
+    # names of the classes below the floor in a column on the right, each at its dot's height unless it would
+    # overlap the label above it (leaders then stay short and roughly parallel)
+    below = drawn[drawn["precision_auto"] < precision_floor].sort_values("precision_auto", ascending=False)
+    gap, label_ys = (ylim[1] - ylim[0]) * 0.037, []
+    for y in below["precision_auto"]:
+        label_ys.append(min(y, label_ys[-1] - gap) if label_ys else min(y, precision_floor - gap / 2))
+    for (_, row), y in zip(below.iterrows(), label_ys):
+        ax.annotate(f"{row['label_name']}  {row['precision_auto']:.2f} ({row['n_auto_pred']:d} auto.)",
+                    (row["train_count"], row["precision_auto"]), xytext=(0.76, y),
+                    textcoords=("axes fraction", "data"), va="center", fontsize=7.5, color=INK_SECONDARY,
+                    arrowprops={"arrowstyle": "-", "color": BASELINE, "linewidth": 0.7, "shrinkA": 2, "shrinkB": 4},
+                    zorder=2)
+
+    handles = [Line2D([], [], marker="o", linestyle="", markersize=7, markerfacecolor=SERIES_COLORS[0],
+                      markeredgecolor=SURFACE, label=f"≥ {min_auto} automatic clauses"),
+               Line2D([], [], marker="o", linestyle="", markersize=7, markerfacecolor=SURFACE,
+                      markeredgecolor=SERIES_COLORS[0], markeredgewidth=1.5,
+                      label=f"< {min_auto} automatic clauses (unreliable)")]
+    ax.legend(handles=handles, frameon=False, labelcolor=INK, loc="lower left", fontsize=8.5)
+
+    undefined = table[table["precision_auto"].isna()]
+    if len(undefined):
+        per_group = undefined["frequency_group"].value_counts().reindex(groups.index, fill_value=0)
+        fig.text(0.01, 0.01, f"Not drawn: {len(undefined)} classes never predicted at or above the threshold "
+                 f"(precision undefined) — " + ", ".join(f"{n} {g}" for g, n in per_group.items()) + ".",
+                 fontsize=8, color=INK_MUTED)
+    ax.xaxis.set_major_locator(LogLocator(subs=(1, 3)))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:,.0f}"))
+    ax.set_xlabel("training clauses of the class (log scale)", color=INK_SECONDARY)
+    ax.set_ylabel("precision of the automatic labels of the class", color=INK_SECONDARY)
+    _style_axes(ax)
+    if title:
+        ax.set_title(title, color=INK, fontsize=11, loc="left", pad=22)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)

@@ -11,6 +11,8 @@ from src.calibration import (
     coverage_precision_figure,
     expected_calibration_error,
     operating_point,
+    per_class_operating_point,
+    per_class_precision_figure,
     reliability_diagram,
     select_threshold,
 )
@@ -97,3 +99,34 @@ def test_report_chooses_threshold_on_validation_and_reads_test_at_it(tmp_path):
     coverage_precision_figure(arrays, report["operating_points"], tmp_path / "coverage.png")
     assert (tmp_path / "reliability.png").stat().st_size > 0
     assert (tmp_path / "coverage.png").stat().st_size > 0
+
+
+def test_per_class_counts_by_true_and_predicted_class():
+    labels = [0, 0, 1, 1, 2, 2]
+    preds = [0, 1, 1, 1, 1, 2]
+    confidences = [0.9, 0.95, 0.8, 0.3, 0.99, 0.5]  # automatic at 0.7: clauses 0, 1, 2 and 4
+    table = per_class_operating_point(labels, preds, confidences, 0.7, num_labels=4, min_auto=2)
+    assert table["support"].tolist() == [2, 2, 2, 0]
+    assert table["n_auto"].tolist() == [2, 1, 1, 0]
+    assert table["share_auto"].tolist()[:3] == [1.0, 0.5, 0.5] and np.isnan(table["share_auto"].iloc[3])
+    assert table["n_auto_pred"].tolist() == [1, 3, 0, 0]  # clauses 1, 2 and 4 labelled 1 automatically
+    assert table["n_auto_correct"].tolist() == [1, 1, 0, 0]
+    assert table["precision_auto"].iloc[:2].tolist() == pytest.approx([1.0, 1 / 3])
+    assert table["precision_auto"].iloc[2:].isna().all() and table["precision_ci95_low"].iloc[2:].isna().all()
+    assert table["precision_ci95_low"].iloc[1] < 1 / 3 < table["precision_ci95_high"].iloc[1]
+    assert table["reliable"].tolist() == [False, True, False, False]
+
+
+def test_per_class_counts_add_up_to_global_operating_point(tmp_path):
+    rng = np.random.default_rng(0)
+    labels, confidences = rng.integers(0, 10, 2_000), rng.uniform(0, 1, 2_000)
+    preds = np.where(rng.uniform(0, 1, 2_000) < confidences, labels, rng.integers(0, 10, 2_000))
+    table = per_class_operating_point(labels, preds, confidences, 0.6, num_labels=10)
+    point = operating_point(confidences, labels == preds, 0.6)
+    assert table["n_auto"].sum() == table["n_auto_pred"].sum() == point["n_auto"]
+    assert table["n_auto_correct"].sum() / table["n_auto_pred"].sum() == pytest.approx(point["precision"])
+
+    table = table.assign(train_count=np.arange(10) * 50 + 20, label_name=[f"class {i}" for i in range(10)],
+                         frequency_group=pd.qcut(np.arange(10), 3, labels=["tail", "middle", "head"]))
+    per_class_precision_figure(table, tmp_path / "per_class.png", overall_precision=point["precision"])
+    assert (tmp_path / "per_class.png").stat().st_size > 0
