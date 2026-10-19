@@ -10,7 +10,8 @@
 comparison, shared modules `src/config.py`, `src/data.py`, `src/metrics.py`, `src/utils.py`), documentation
 translated into English. `load_ledgar()` checked on the real data (60,000 / 10,000 / 10,000, 100 labels).
 Stream A: generic fine-tuning script ready, DistilBERT smoke test passed locally, `max_length` = 256 decided
-(branch `feat/a-hf-finetuning`).
+(branch `feat/a-hf-finetuning`); single test evaluation from the best checkpoint ready, no retraining
+(branch `feat/a-eval-checkpoint`).
 **Next main step: run in parallel EDA + TF-IDF (B), full DistilBERT on Colab (A4) and MiniLM index (C).**
 
 **Deadlines:**
@@ -51,6 +52,7 @@ Stream A: generic fine-tuning script ready, DistilBERT smoke test passed locally
 - [x] Generic fine-tuning script (`src/models/transformer.py`, `scripts/train_transformer.py`) + Colab notebook 04.
 - [x] `max_length` chosen from the token lengths (256).
 - [x] DistilBERT smoke test (local, MPS).
+- [x] Single test evaluation from the best checkpoint (`scripts/evaluate_checkpoint.py`, single-use guard).
 - [ ] Encoder screening on the validation set.
 - [ ] Final full fine-tuning run + single test evaluation.
 - [ ] LoRA runs + trade-off table.
@@ -139,6 +141,31 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 19 October 2026 — stream A: single test evaluation from the best checkpoint (Robin)
+
+- **Problem**: A6 was planned as a retrain of the chosen encoder with `--variant final --eval-test`. That costs
+  one more full GPU run, and the retrained weights are not exactly the ones selected on validation (GPU
+  non-determinism, fp16): the test score would belong to a different model than the one chosen.
+- **Solution**: `scripts/evaluate_checkpoint.py --source-run <run_id>` (logic in
+  `src/models/transformer.py::evaluate_checkpoint`). It reads the source `config.json`, reloads the tokenizer and
+  the model from `best_checkpoint` (repo-relative path, or absolute for the Drive checkpoints folder), predicts
+  validation and test with the same tokenisation (truncation at the source `max_length`, dynamic padding) and the
+  same precision as the evaluations made during training, and writes a new run `<model>_final_<timestamp>`:
+  `config.json` = source config + `source_run` (`best_checkpoint` included); `metrics.json` = training cost and
+  curves of the source run (same weights) + fresh `validation` and `test` blocks.
+- **Single-use guard** (`src/utils.py::runs_with_test`): refuses when the source run itself (trained with
+  `--eval-test`) or any run with `source_run` = it already has test metrics; `--force` overrides it with a
+  warning explaining why the test set is evaluated only once.
+- Shared code moved to `src/models/transformer.py` and used by both scripts: `tokenize_ledgar`, `print_metrics`,
+  the test-set warning.
+- Notebook 04, section 9: `FINAL_RUN = ""` + the same `assert` guard + a call to the script (no retraining).
+- **Tests**: 4 guard tests (CPU, no model download); `python -m pytest -q` → 14 passed.
+- **End-to-end check** (local, MPS) on the smoke checkpoint of `distilbert_smoke_20261018-1823`, outputs in a
+  temporary folder and the test split replaced by the validation subset (the real test set was not touched):
+  validation macro-F1 0.0272 = source run; the 2,000 validation predictions are identical to the smoke run's
+  (largest probability difference 0.0); a second call is refused by the guard.
+- Next: A4 / A5 on validation only, then A6 = `evaluate_checkpoint.py --source-run <run chosen on validation>`.
 
 ### 18 October 2026 — stream A: fine-tuning script, token lengths, smoke test (Robin)
 

@@ -1,4 +1,7 @@
 # Python 3.11+
+# Runtime dependencies only: this file is also installed on Colab, where dev tools
+# (jupyterlab, ipykernel, pytest) would upgrade the kernel packages pinned by google-colab.
+# Local setup: pip install -r requirements-dev.txt
 # Deep learning core
 torch>=2.4
 transformers>=5.0          # transformers 5 names: eval_strategy, processing_class
@@ -17,12 +20,7 @@ pyarrow>=16
 # Retrieval
 rank-bm25>=0.2.2
 
-# Visualisation, notebooks
+# Visualisation, progress bars
 matplotlib>=3.9
 seaborn>=0.13
-jupyterlab>=4.2
-ipykernel>=6.29
 tqdm>=4.66
-
-# Tests
-pytest>=8.0

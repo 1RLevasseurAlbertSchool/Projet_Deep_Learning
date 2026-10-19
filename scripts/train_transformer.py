@@ -1,10 +1,12 @@
-"""Fine-tune a Hugging Face encoder on LEDGAR (stream A, tasks A1-A6).
+"""Fine-tune a Hugging Face encoder on LEDGAR (stream A, tasks A1-A5).
 
 Examples:
     python scripts/train_transformer.py --model distilbert-base-uncased --variant smoke \
         --subset 2000 --epochs 1 --max-length 128
     python scripts/train_transformer.py --model distilbert-base-uncased --variant full
-    python scripts/train_transformer.py --model <chosen_model> --variant final --eval-test
+
+The single test evaluation of the run chosen on validation (A6) reuses its best checkpoint, without retraining:
+    python scripts/evaluate_checkpoint.py --source-run <run_id>
 """
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # `python scripts/...` from the repo root
 
 from src.config import MODELS_DIR, SEED  # noqa: E402
-from src.models.transformer import DEFAULT_CONFIG, train_and_evaluate  # noqa: E402
+from src.models.transformer import DEFAULT_CONFIG, TEST_SET_WARNING, print_metrics, train_and_evaluate  # noqa: E402
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -35,26 +37,10 @@ def parse_args(argv=None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def print_metrics(out: dict) -> None:
-    m = out["metrics"]
-    print(f"\nRun {out['run_id']}  (results/runs/{out['run_id']}/)")
-    print(f"{'split':<12}{'macro-F1':>10}{'micro-F1':>10}{'accuracy':>10}")
-    for split in ("validation", "test"):
-        if split in m:
-            s = m[split]
-            print(f"{split:<12}{s['macro_f1']:>10.4f}{s['micro_f1']:>10.4f}{s['accuracy']:>10.4f}")
-    gpu = f"{m['peak_gpu_memory_mb']:.0f} MB" if m["peak_gpu_memory_mb"] is not None else "n/a (no CUDA)"
-    print(f"train time {m['train_time_s']:.0f} s | trainable params {m['n_trainable_params']:,} "
-          f"/ {m['n_total_params']:,} | peak GPU memory {gpu} | best epoch {out['config']['best_epoch']}")
-
-
 def main(argv=None) -> None:
     args = parse_args(argv)
     if args.eval_test:
-        print("\n" + "!" * 88)
-        print("!! WARNING: --eval-test predicts the TEST set. Evaluate it ONLY ONCE per final model,")
-        print("!! after the model was chosen on VALIDATION. Never tune anything on these numbers.")
-        print("!" * 88 + "\n")
+        print("\n" + TEST_SET_WARNING + "\n")
 
     config = {
         **DEFAULT_CONFIG,

@@ -100,14 +100,15 @@ git clone https://github.com/1RLevasseurAlbertSchool/Projet_Deep_Learning.git
 cd Projet_Deep_Learning
 
 python -m venv .venv && source .venv/bin/activate   # Python 3.11+
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime dependencies + jupyterlab, ipykernel, pytest
 
 python -m pytest -q          # tests of the shared metrics
 python -m src.data           # checks LEDGAR loading (60k / 10k / 10k, 100 labels)
 ```
 
 Heavy training (fine-tuning) runs on **Google Colab (GPU)**; everything else runs locally.
-In Colab: clone the repo, `pip install -r requirements.txt`, then open the notebook.
+In Colab: clone the repo, `pip install -r requirements.txt` (runtime dependencies only: the dev tools would
+upgrade the `ipykernel` / `jupyter-client` versions pinned by `google-colab`), then open the notebook.
 
 ## Reproducibility
 
@@ -123,7 +124,8 @@ In Colab: clone the repo, `pip install -r requirements.txt`, then open the noteb
 ├── CLAUDE.md              # Working rules of the project (humans + Claude Code)
 ├── PROGRESS.md            # Operational log: actual state, results, problems, next actions
 ├── STRATEGY.md            # Strategy, A/B/C split, schedule, risks, presentation plan
-├── requirements.txt
+├── requirements.txt       # Runtime dependencies (local and Colab)
+├── requirements-dev.txt   # requirements.txt + jupyterlab, ipykernel, pytest (local only)
 ├── data/                  # (gitignored) raw/ and processed/ — LEDGAR downloaded by src/data.py
 ├── notebooks/             # Numbered notebooks, read in order (00 → 06)
 ├── src/

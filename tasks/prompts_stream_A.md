@@ -86,8 +86,8 @@ python scripts/train_transformer.py --model distilbert-base-uncased --variant fu
 # A5 — one bigger encoder if GPU time allows (validation only)
 python scripts/train_transformer.py --model nlpaueb/legal-bert-base-uncased --variant full --lr 3e-5 --batch-size 16
 
-# A6 — final run of the encoder chosen ON VALIDATION, with the single test evaluation
-python scripts/train_transformer.py --model <chosen_model> --variant final --eval-test
+# A6 — single test evaluation of the run chosen ON VALIDATION, from its best checkpoint (no retraining)
+python scripts/evaluate_checkpoint.py --source-run <chosen_run_id>
 ```
 
 After each run, ask Claude Code:
@@ -193,7 +193,7 @@ Context: stream A, task A10 (delivery). Create a branch `feat/a-release`.
    does not exist. Never round in a way that changes a conclusion; keep 3 decimals for F1.
 3. Add under the pre-registered comparison a "Result of the main comparison" paragraph copied from PROGRESS.md.
    Do not edit the pre-registered block itself.
-4. Delivery check in a fresh clone in a temporary folder: `pip install -r requirements.txt`,
+4. Delivery check in a fresh clone in a temporary folder: `pip install -r requirements-dev.txt`,
    `python -m pytest -q`, `python -m src.data`, and check that every notebook referenced in README exists.
    Report anything broken instead of hiding it.
 5. Update the milestone statuses in README (⏳ → ✅ only if done), PROGRESS.md and tasks/todo.md.

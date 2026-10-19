@@ -11,7 +11,7 @@
 - [x] **S0.3** GitHub repository created, first push (Robin)
 - [ ] **S0.4** Amandine and Brian added as collaborators (Robin)
 - [x] **S0.5** Repository documentation translated into English (Robin, 18/10)
-- [ ] **S0.6** Everyone clones the repo, creates their `.venv`, `pip install -r requirements.txt` (everyone)
+- [ ] **S0.6** Everyone clones the repo, creates their `.venv`, `pip install -r requirements-dev.txt` (everyone)
 - [ ] **S0.7** Check everyone's Colab GPU access + shared Drive folder for checkpoints (everyone)
 
 ## Stream A — Robin: Transformers, training, statistical comparison
