@@ -44,8 +44,9 @@ Colab (A7) and MiniLM index (C) in parallel.**
 - [ ] Tag `m1`.
 
 ### m2 — Retrieval index (Brian)
-- [ ] `all-MiniLM-L6-v2` index over the clause bank.
-- [ ] 10 queries checked by hand.
+- [x] Implemented reusable MiniLM dense retrieval with normalised cosine search and a validated embedding cache.
+- [x] Created notebook 02 with 10 qualitative searches (5 lawyer questions + 5 validation clauses).
+- [ ] Run notebook on the full LEDGAR data, build the index, and complete the 10 manual relevance checks.
 - [ ] Tag `m2`.
 
 ### m3 — LSTM and error analysis (Amandine)

@@ -1,5 +1,10 @@
 """Similar-clause retrieval (stream C, Brian).
 
-Expected API: search(query: str, k: int = 5) -> list[dict] with idx, text, label, label_name, score.
-Bank = train split; normalised embeddings (cosine = dot product), cached in data/indexes/.
+Build a :class:`DenseRetriever` from the train split with :func:`build_dense_index`,
+then call ``retriever.search(query, k=5)``. Results contain ``idx``, ``text``,
+``label``, ``label_name`` and cosine ``score``.
 """
+
+from src.retrieval.dense import DenseRetriever, build_dense_index
+
+__all__ = ["DenseRetriever", "build_dense_index"]
