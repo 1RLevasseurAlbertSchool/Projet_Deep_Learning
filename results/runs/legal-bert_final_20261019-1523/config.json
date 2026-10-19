@@ -1,0 +1,36 @@
+{
+  "model_name": "nlpaueb/legal-bert-base-uncased",
+  "variant": "final",
+  "max_length": 256,
+  "epochs": 3,
+  "lr": 3e-05,
+  "batch_size": 16,
+  "warmup": 0.1,
+  "weight_decay": 0.01,
+  "subset": null,
+  "eval_test": true,
+  "output_dir": "/content/drive/MyDrive/ledgar_checkpoints",
+  "seed": 42,
+  "lora": null,
+  "run_id": "legal-bert_final_20261019-1523",
+  "model_revision": "15b570cbf88259610b082a167dacc190124f60f6",
+  "device": "cuda",
+  "gpu_name": "Tesla T4",
+  "fp16": true,
+  "n_examples": {
+    "validation": 10000,
+    "test": 10000
+  },
+  "best_epoch": 3.0,
+  "best_checkpoint": "/content/drive/MyDrive/ledgar_checkpoints/legal-bert_full_20261019-0916/checkpoint-11250",
+  "versions": {
+    "python": "3.13.15",
+    "torch": "2.11.0+cu130",
+    "transformers": "5.18.0",
+    "sentence_transformers": "5.7.0",
+    "peft": "0.21.1",
+    "sklearn": "1.6.1",
+    "datasets": "4.8.5"
+  },
+  "source_run": "legal-bert_full_20261019-0916"
+}

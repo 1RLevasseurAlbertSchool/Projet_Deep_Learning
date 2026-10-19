@@ -124,8 +124,9 @@ jupyter lab
 
 ## Git
 
-- `main` branch = always working. Work on `feat/<stream>-<topic>` branches (e.g. `feat/b-tfidf-baseline`),
-  merged through a Pull Request reviewed by another member.
+- `main` branch = always working. Work directly on `main` (no feature branches): `git pull` before starting,
+  commit small, push after review.
+- The Colab Drive clone is a read-only mirror of `origin` (notebook 04, section 2): never edit or commit in it.
 - Commits in English, present tense, short (`Add TF-IDF baseline and macro-F1 report`).
 - **Milestone tags** required by the course: `m1`, `m2`, `m3`, `m4`, then `v1.0` at delivery.
 - Never commit: data, checkpoints (`*.pt`, `*.safetensors`, `*.bin`), indexes, predictions, `.env`, course

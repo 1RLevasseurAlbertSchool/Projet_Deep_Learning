@@ -1,0 +1,36 @@
+{
+  "model_name": "distilbert-base-uncased",
+  "variant": "full",
+  "max_length": 256,
+  "epochs": 3,
+  "lr": 5e-05,
+  "batch_size": 32,
+  "warmup": 0.1,
+  "weight_decay": 0.01,
+  "subset": null,
+  "eval_test": false,
+  "output_dir": "/content/drive/MyDrive/ledgar_checkpoints",
+  "seed": 42,
+  "lora": null,
+  "run_id": "distilbert_full_20261019-0838",
+  "model_revision": "12040accade4e8a0f71eabdb258fecc2e7e948be",
+  "device": "cuda",
+  "gpu_name": "Tesla T4",
+  "fp16": true,
+  "n_examples": {
+    "train": 60000,
+    "test": 10000,
+    "validation": 10000
+  },
+  "best_epoch": 3.0,
+  "best_checkpoint": "/content/drive/MyDrive/ledgar_checkpoints/distilbert_full_20261019-0838/checkpoint-5625",
+  "versions": {
+    "python": "3.13.15",
+    "torch": "2.11.0+cu130",
+    "transformers": "5.18.0",
+    "sentence_transformers": "5.7.0",
+    "peft": "0.21.1",
+    "sklearn": "1.6.1",
+    "datasets": "4.8.5"
+  }
+}

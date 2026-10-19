@@ -9,10 +9,11 @@
 **Current status:** 🟡 Repository initialised and pushed to GitHub (structure, documentation, pre-registered main
 comparison, shared modules `src/config.py`, `src/data.py`, `src/metrics.py`, `src/utils.py`), documentation
 translated into English. `load_ledgar()` checked on the real data (60,000 / 10,000 / 10,000, 100 labels).
-Stream A: generic fine-tuning script ready, DistilBERT smoke test passed locally, `max_length` = 256 decided
-(branch `feat/a-hf-finetuning`); single test evaluation from the best checkpoint ready, no retraining
-(branch `feat/a-eval-checkpoint`).
-**Next main step: run in parallel EDA + TF-IDF (B), full DistilBERT on Colab (A4) and MiniLM index (C).**
+Stream A: full DistilBERT (A4) and Legal-BERT (A5) fine-tuned on Colab, validation macro-F1 0.7863 and 0.7930;
+`legal-bert_full_20261019-0916` selected on validation and evaluated once on test (A6): **test macro-F1 0.7905,
+accuracy 0.8717**. Team now works directly on `main` (no feature branches).
+**Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8); LoRA (A7) and
+MiniLM index (C) in parallel.**
 
 **Deadlines:**
 - code freeze: **Thursday 22 October 2026, 23:59** (internal margin);
@@ -53,8 +54,8 @@ Stream A: generic fine-tuning script ready, DistilBERT smoke test passed locally
 - [x] `max_length` chosen from the token lengths (256).
 - [x] DistilBERT smoke test (local, MPS).
 - [x] Single test evaluation from the best checkpoint (`scripts/evaluate_checkpoint.py`, single-use guard).
-- [ ] Encoder screening on the validation set.
-- [ ] Final full fine-tuning run + single test evaluation.
+- [x] Encoder screening on the validation set (DistilBERT vs Legal-BERT, 19/10).
+- [x] Final full fine-tuning run + single test evaluation (`legal-bert_final_20261019-1523`, 19/10).
 - [ ] LoRA runs + trade-off table.
 - [ ] Paired tests (main comparison + secondary ones).
 - [ ] Tag `m4`.
@@ -103,6 +104,60 @@ DeBERTa         88.2   83.1
 Legal-BERT      88.2   83.0
 ```
 
+### Encoder screening on validation (A4, A5, 19/10)
+
+Colab, Tesla T4, fp16, full training set (60,000), `max_length` 256, 3 epochs, 10 % warmup, weight decay 0.01,
+seed 42, validation = 10,000 clauses (2018). Numbers read from `results/runs/<run_id>/metrics.json` and
+`config.json`.
+
+| Run | Encoder | lr / batch | Steps | Val macro-F1 | Val accuracy | Best epoch | Train time | Trainable / total params | Peak GPU memory |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `distilbert_full_20261019-0838` | `distilbert-base-uncased` | 5e-5 / 32 | 5,625 | 0.7863 | 0.8660 | 3 of 3 | 1,227.5 s (20.5 min) | 67,030,372 / 67,030,372 | 2,536.7 MB |
+| `legal-bert_full_20261019-0916` | `nlpaueb/legal-bert-base-uncased` | 3e-5 / 16 | 11,250 | **0.7930** | **0.8729** | 3 of 3 | 2,688.2 s (44.8 min) | 109,559,140 / 109,559,140 | 3,106.2 MB |
+| Legal-BERT − DistilBERT | | | | +0.0067 | +0.0069 | | × 2.19 | × 1.63 | +569.5 MB |
+
+Validation curve per epoch (evaluation at the end of each epoch):
+
+| Epoch | DistilBERT loss | DistilBERT macro-F1 | DistilBERT accuracy | Legal-BERT loss | Legal-BERT macro-F1 | Legal-BERT accuracy |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.622 | 0.7197 | 0.8355 | 0.608 | 0.7251 | 0.8395 |
+| 2 | 0.534 | 0.7566 | 0.8563 | 0.524 | 0.7720 | 0.8613 |
+| 3 | 0.507 | 0.7863 | 0.8660 | 0.501 | 0.7930 | 0.8729 |
+
+- Both runs still improve at the last epoch (macro-F1 +0.0296 and +0.0209 from epoch 2 to 3, validation loss still
+  going down): best epoch = last epoch, the models are not converged.
+- Per class, Legal-BERT is better on 57 classes, worse on 30, equal on 13. Two classes have F1 = 0 for both
+  models: 8 `Assigns` (3 validation clauses) and 14 `Books` (**no** validation clause: its F1 is 0 by construction,
+  `zero_division=0` over the 100 labels, which caps every validation macro-F1 at 0.99 and does not change the
+  ranking).
+- The two runs differ by encoder **and** by recipe (lr, batch size): the screening compares the two set-ups as run,
+  not the encoders alone. The +0.0067 gap is small and was not tested (the validation predictions are on Drive);
+  the pre-registered selection rule does not require a test (best validation macro-F1).
+- `microsoft/deberta-v3-base` (notebook 04, section 8) was not run.
+
+### Single test evaluation of the selected encoder (A6, 19/10)
+
+Run `legal-bert_final_20261019-1523` = `scripts/evaluate_checkpoint.py --source-run legal-bert_full_20261019-0916`
+(best checkpoint `checkpoint-11250`, epoch 3, on Drive), Tesla T4, fp16, `max_length` 256, no retraining.
+
+| Split | Clauses | Macro-F1 | Micro-F1 = accuracy | Classes with F1 = 0 |
+|---|---:|---:|---:|---|
+| Validation (2018), re-predicted | 10,000 | 0.7930 | 0.8729 | 8 `Assigns`, 14 `Books` |
+| **Test (2019), evaluated once** | 10,000 | **0.7905** | **0.8717** | 8 `Assigns` (4 clauses), 14 `Books` (2 clauses) |
+
+- Re-predicted validation = source run **exactly**: macro-F1, micro-F1, accuracy and the 100 per-class F1 are
+  identical (largest difference 0.0) → the loaded weights and tokenisation are the ones selected on validation.
+- Test − validation: macro-F1 −0.0024, accuracy −0.0012 (one year of drift, 2018 → 2019).
+- Gap to the LexGLUE reference (Legal-BERT, LEDGAR test): **−3.95 pt macro-F1** (79.05 vs 83.0), −1.03 pt micro-F1
+  (87.17 vs 88.2). Not a paired comparison: published numbers, other runs. Likely causes:
+  1. `max_length` 256 instead of 512: 13.5 % of the training clauses exceed 256 tokens with the uncased BERT
+     WordPiece vocabulary (A3; Legal-BERT has its own vocabulary, its token lengths were not recorded) and lose
+     their end;
+  2. 3 epochs while still improving: validation macro-F1 +0.0209 between epochs 2 and 3, best epoch = last one.
+
+  The macro-F1 gap being about 4 times the micro-F1 gap suggests that the shortfall sits mostly on the rare
+  classes.
+
 ## 4. Problems met and solutions
 
 ### `python -m src.data` fails outside the project environment (18/10)
@@ -127,10 +182,15 @@ before the first push.
 ## 5. Next immediate action
 
 1. Robin: add Amandine and Brian as collaborators on GitHub (if not done yet).
-2. Robin: push `feat/a-hf-finetuning`, open the PR, then run A4 (full DistilBERT, validation only) with
-   `notebooks/04_transformer_finetuning.ipynb` on Colab.
-3. Team: confirm the `metrics.json` layout per split (see the 18/10 log entry) before B5 writes its first run.
-4. Parallel work: B2-B5 (EDA, TF-IDF), C1-C3 (index, queries).
+2. Everyone: work on `main`, `git pull` before starting (see `CLAUDE.md`, Git section).
+3. Amandine: B5 (TF-IDF + LogReg, predictions in the common format) — it unblocks the pre-registered main
+   comparison A8 (Model A = `legal-bert_final_20261019-1523`).
+4. Robin: copy `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` from the Drive clone
+   (gitignored, absent from local checkouts) to the machines running A8, A9 and C8.
+5. Robin: A7 LoRA on `nlpaueb/legal-bert-base-uncased` with the same recipe (`max_length` 256, 3 epochs) so that
+   full vs LoRA stays comparable.
+6. Team: confirm the `metrics.json` layout per split (see the 18/10 log entry) before B5 writes its first run.
+7. Parallel work: B2-B5 (EDA, TF-IDF), C1-C3 (index, queries).
 
 ## 6. Rule for updating this file
 
@@ -141,6 +201,71 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 19 October 2026 — Git workflow: work directly on `main` (Robin)
+
+- **Decision**: no new branches. `git pull` on `main` before starting, small commits, push after review
+  (`CLAUDE.md`, Git section). The documented workflow (one feature branch + reviewed PR per task) was not the one
+  actually followed: `feat/a-eval-checkpoint` was merged into `main` locally.
+- **Notebook 04, section 2**: the Drive clone is a read-only mirror, updated with `checkout -f <BRANCH>` +
+  `reset --hard origin/<BRANCH>` instead of `checkout` + `pull --ff-only`. Colab writes `results/runs/<run_id>/`
+  untracked in the Drive clone; once those JSON files are committed on `main` from a laptop, `pull --ff-only`
+  aborts ("untracked working tree files would be overwritten by merge"). Reproduced on a throwaway repository:
+  `pull --ff-only` aborts; `checkout -f` + `reset --hard` succeeds, replaces the colliding files with the committed
+  copies, keeps the other untracked runs and discards local edits to tracked files. `results/predictions/`
+  (gitignored) is not touched.
+
+### 19 October 2026 — stream A: selection on validation and single test evaluation (A6, Robin)
+
+- **Selection** by the pre-registered rule (README, Model A: selected on the validation set only; criterion: best
+  validation macro-F1, nothing else): `legal-bert_full_20261019-0916` (0.7930) over `distilbert_full_20261019-0838`
+  (0.7863). Neither screening run has test metrics (`eval_test: false`).
+- **Run** `legal-bert_final_20261019-1523` (Colab T4, fp16) =
+  `scripts/evaluate_checkpoint.py --source-run legal-bert_full_20261019-0916`, no retraining. `config.json`:
+  `source_run` = the selected run, `best_checkpoint` = `.../checkpoint-11250` (epoch 3), `max_length` 256,
+  `eval_test: true`.
+- **Test (2019, 10,000 clauses, evaluated once)**: macro-F1 **0.7905**, micro-F1 = accuracy **0.8717**; F1 = 0 for
+  classes 8 `Assigns` and 14 `Books`.
+- **Validation re-predicted = source run exactly**: macro-F1 0.7930, micro-F1 = accuracy 0.8729, and the 100
+  per-class F1 identical (largest difference 0.0). Training cost and curves copied from the source run (same
+  weights): 2,688.2 s, 109,559,140 trainable / total parameters, peak GPU memory 3,106.2 MB.
+- **Gap to LexGLUE** (Legal-BERT, 83.0 test macro-F1, 88.2 micro-F1): −3.95 pt macro-F1, −1.03 pt micro-F1. Likely
+  causes: `max_length` 256 instead of 512 (13.5 % of the training clauses truncated, A3) and 3 epochs while
+  validation macro-F1 was still improving (+0.0209 between epochs 2 and 3). Details in section 3.
+- Predictions `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` are in the Drive clone
+  (gitignored), not in this checkout.
+- **Consequence**: the test set is now used for this model. A later run (512 tokens, more epochs) can only be
+  compared on validation; Model A of the main comparison stays `legal-bert_final_20261019-1523`.
+- The main comparison (A8) waits for stream B's TF-IDF + LogReg predictions (B5); the pre-registered README block
+  is unchanged.
+
+### 19 October 2026 — stream A: Legal-BERT screening on validation (A5, Robin)
+
+- Run `legal-bert_full_20261019-0916`: `nlpaueb/legal-bert-base-uncased` (revision `15b570cb`), full training set,
+  `max_length` 256, 3 epochs, lr 3e-5, batch 16, 10 % warmup, weight decay 0.01, seed 42, Colab T4, fp16,
+  11,250 steps.
+- Validation per epoch: macro-F1 0.7251 → 0.7720 → **0.7930**; accuracy 0.8395 → 0.8613 → 0.8729; loss
+  0.608 → 0.524 → 0.501. Training loss 4.611 (step 225) → 0.329 (step 11,250). Best epoch 3 (`checkpoint-11250`).
+- Cost: 2,688.2 s (44.8 min), 109,559,140 trainable / total parameters, peak GPU memory 3,106.2 MB.
+- vs DistilBERT (A4): +0.0067 macro-F1, +0.0069 accuracy, for 2.19 × the training time, 1.63 × the parameters and
+  +569.5 MB of GPU memory. Screening table in section 3.
+- The token lengths with the Legal-BERT tokenizer (notebook 04, section 8) are not recorded in the repository.
+  `microsoft/deberta-v3-base` was not run.
+
+### 19 October 2026 — stream A: full DistilBERT on Colab (A4, Robin)
+
+- Colab smoke check first: `distilbert_smoke_20261019-0836` (T4, fp16, 2,000 examples per split, 1 epoch,
+  `max_length` 128): 18.9 s, validation macro-F1 0.0317, accuracy 0.185, peak GPU memory 1,712.3 MB — same order
+  as the local MPS run (0.0272 / 0.1845, fp32). The Colab pipeline works; not a reportable score.
+- Run `distilbert_full_20261019-0838`: `distilbert-base-uncased` (revision `12040acc`), 60,000 training clauses,
+  `max_length` 256, 3 epochs, lr 5e-5, batch 32, 10 % warmup, weight decay 0.01, seed 42, Colab T4, fp16,
+  5,625 steps.
+- Validation per epoch: macro-F1 0.7197 → 0.7566 → **0.7863**; accuracy 0.8355 → 0.8563 → 0.8660; loss
+  0.622 → 0.534 → 0.507. Training loss 4.548 (step 113) → 0.343 (step 5,537). Best epoch 3 (`checkpoint-5625`).
+- Cost: 1,227.5 s (20.5 min), 67,030,372 trainable / total parameters, peak GPU memory 2,536.7 MB.
+- Colab library versions for all runs of 19/10 (in each `config.json`): Python 3.13.15, torch 2.11.0+cu130,
+  transformers 5.18.0, datasets 4.8.5 — not the local `.venv` ones (torch 2.14.1, transformers 5.20.1,
+  datasets 5.1.0).
 
 ### 19 October 2026 — stream A: single test evaluation from the best checkpoint (Robin)
 
