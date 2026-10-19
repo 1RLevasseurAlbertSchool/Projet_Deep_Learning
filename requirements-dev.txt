@@ -1,0 +1,10 @@
+# Local development: runtime dependencies + notebook and test tools.
+# Never install this file on Colab (it would break google-colab's pinned ipykernel / jupyter-client).
+-r requirements.txt
+
+# Notebooks
+jupyterlab>=4.2
+ipykernel>=6.29
+
+# Tests
+pytest>=8.0

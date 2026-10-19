@@ -193,7 +193,7 @@ Context: stream A, task A10 (delivery). Create a branch `feat/a-release`.
    does not exist. Never round in a way that changes a conclusion; keep 3 decimals for F1.
 3. Add under the pre-registered comparison a "Result of the main comparison" paragraph copied from PROGRESS.md.
    Do not edit the pre-registered block itself.
-4. Delivery check in a fresh clone in a temporary folder: `pip install -r requirements.txt`,
+4. Delivery check in a fresh clone in a temporary folder: `pip install -r requirements-dev.txt`,
    `python -m pytest -q`, `python -m src.data`, and check that every notebook referenced in README exists.
    Report anything broken instead of hiding it.
 5. Update the milestone statuses in README (⏳ → ✅ only if done), PROGRESS.md and tasks/todo.md.

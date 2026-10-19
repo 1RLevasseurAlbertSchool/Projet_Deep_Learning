@@ -111,13 +111,16 @@ These contracts let the three streams move forward in parallel. Any change is di
 
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Python 3.11+
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime dependencies + jupyterlab, ipykernel, pytest
 jupyter lab
 ```
 
 - Heavy training (BERT, LoRA, full LSTM): **Google Colab GPU** (T4 / L4 / A100).
 - EDA, TF-IDF, retrieval on a subset, audit: locally.
-- In Colab: `!git clone`, `%cd`, `!pip install -r requirements.txt`, then `import src`.
+- In Colab: `!git clone`, `%cd`, `!pip install -q -r requirements.txt`, then `import src`.
+- `requirements.txt` = runtime dependencies only; dev tools go in `requirements-dev.txt` (which starts with
+  `-r requirements.txt`). Never install `requirements-dev.txt` on Colab: it upgrades the `ipykernel` /
+  `jupyter-client` versions pinned by `google-colab` and breaks the runtime.
 
 ## Git
 
