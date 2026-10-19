@@ -56,6 +56,18 @@ def load_run(run_id: str) -> tuple[dict, dict]:
             json.loads((run_dir / "metrics.json").read_text()))
 
 
+def list_runs() -> list[str]:
+    """run_id of every results/runs/<run_id>/ with a config.json, sorted."""
+    return sorted(path.parent.name for path in RUNS_DIR.glob("*/config.json"))
+
+
+def markdown_table(df) -> str:
+    """DataFrame as a markdown table (for PROGRESS.md / README), cells as formatted by the caller."""
+    lines = ["| " + " | ".join(map(str, df.columns)) + " |", "|" + "---|" * len(df.columns)]
+    lines += ["| " + " | ".join(map(str, row)) + " |" for row in df.itertuples(index=False)]
+    return "\n".join(lines)
+
+
 def runs_with_test(source_run: str) -> list[str]:
     """Runs that already predicted the test set with the model of `source_run`.
 

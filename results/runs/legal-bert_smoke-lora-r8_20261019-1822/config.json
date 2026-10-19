@@ -1,0 +1,47 @@
+{
+  "model_name": "nlpaueb/legal-bert-base-uncased",
+  "variant": "smoke-lora-r8",
+  "max_length": 256,
+  "epochs": 1,
+  "lr": 0.0005,
+  "batch_size": 16,
+  "warmup": 0.1,
+  "weight_decay": 0.01,
+  "subset": 200,
+  "eval_test": false,
+  "output_dir": "models",
+  "seed": 42,
+  "lora": {
+    "r": 8,
+    "alpha": 16,
+    "dropout": 0.1,
+    "target_modules": [
+      "query",
+      "value"
+    ],
+    "modules_to_save": [
+      "classifier"
+    ]
+  },
+  "run_id": "legal-bert_smoke-lora-r8_20261019-1822",
+  "model_revision": "15b570cbf88259610b082a167dacc190124f60f6",
+  "device": "mps",
+  "gpu_name": null,
+  "fp16": false,
+  "n_examples": {
+    "train": 200,
+    "test": 200,
+    "validation": 200
+  },
+  "best_epoch": 1.0,
+  "best_checkpoint": "models/legal-bert_smoke-lora-r8_20261019-1822/checkpoint-13",
+  "versions": {
+    "python": "3.11.8",
+    "torch": "2.14.1",
+    "transformers": "5.20.1",
+    "sentence_transformers": "6.1.0",
+    "peft": "0.21.2",
+    "sklearn": "1.9.1",
+    "datasets": "5.1.0"
+  }
+}

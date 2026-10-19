@@ -5,6 +5,7 @@ Usage:
     stats = token_length_stats("distilbert-base-uncased", texts)    # choice of max_length (A3)
     out = train_and_evaluate({**DEFAULT_CONFIG, "model_name": "distilbert-base-uncased", "variant": "smoke"})
     out = evaluate_checkpoint("legal-bert_full_20261020-1430")     # single test evaluation (A6)
+    out = train_and_evaluate({..., "lr": LORA_LR, "lora": {"r": 8}})  # LoRA (A7)
 
 Every run writes results/runs/<run_id>/ (config.json, metrics.json) and
 results/predictions/<run_id>_<split>.parquet through src.utils (interface contracts of CLAUDE.md).
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import tempfile
 import time
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -22,7 +24,7 @@ import numpy as np
 from src.config import MODELS_DIR, NUM_LABELS, ROOT, SEED, TEXT_COL
 from src.data import get_label_names, load_ledgar
 from src.metrics import classification_metrics
-from src.utils import load_run, make_run_id, runs_with_test, save_predictions, save_run, set_seed
+from src.utils import list_runs, load_run, make_run_id, runs_with_test, save_predictions, save_run, set_seed
 
 DEFAULT_CONFIG = {
     "model_name": "distilbert-base-uncased",
@@ -37,8 +39,22 @@ DEFAULT_CONFIG = {
     "eval_test": False,     # single test evaluation, final models only
     "output_dir": str(MODELS_DIR),
     "seed": SEED,
-    "lora": None,           # hook for task A7 (peft LoRA); None = full fine-tuning
+    "lora": None,           # LoRA settings (task A7), e.g. {"r": 8}, completed by lora_settings; None = full FT
 }
+
+# LoRA trains few parameters and B starts at 0: higher learning rate than full fine-tuning, 1e-4 to 1e-3 (S06)
+LORA_LR = 5e-4
+
+# W_Q and W_V of every attention layer (Hu et al., 2021; S06), per architecture (model.config.model_type).
+# Module names checked with print(model) on each architecture.
+LORA_TARGET_MODULES = {
+    "bert": ["query", "value"],                    # bert-base-uncased, nlpaueb/legal-bert-base-uncased
+    "distilbert": ["q_lin", "v_lin"],              # distilbert-base-uncased
+    "deberta-v2": ["query_proj", "value_proj"],    # microsoft/deberta-v3-base
+}
+
+# Settings that must match between full fine-tuning and LoRA for a fair trade-off table (only lr may differ)
+SHARED_RECIPE = ("max_length", "epochs", "batch_size", "warmup", "weight_decay", "seed")
 
 LENGTH_THRESHOLDS = (128, 256, 512)
 
@@ -148,6 +164,49 @@ def _history(log_history: list[dict]) -> dict:
     return {"train": train, "validation": evals}
 
 
+def lora_settings(model, r: int, **overrides) -> dict:
+    """LoRA settings for `model` (task A7), recorded as config["lora"].
+
+    alpha = 2r, dropout 0.1, LoRA on W_Q / W_V of every attention layer (`LORA_TARGET_MODULES`). The classification
+    head is trained in full because it did not exist before (S06): it is every module of the task model outside the
+    pretrained encoder (BERT: classifier; DistilBERT: pre_classifier + classifier; DeBERTa: pooler + classifier).
+    """
+    model_type = model.config.model_type
+    if model_type not in LORA_TARGET_MODULES:
+        raise ValueError(f"No LoRA target modules for model_type {model_type!r}: check print(model) and add its "
+                         "query / value projections to LORA_TARGET_MODULES")
+    head = [name for name, module in model.named_children()
+            if name != model.base_model_prefix and any(True for _ in module.parameters())]
+    return {"r": r, "alpha": 2 * r, "dropout": 0.1, "target_modules": list(LORA_TARGET_MODULES[model_type]),
+            "modules_to_save": head, **overrides}
+
+
+def apply_lora(model, lora: dict):
+    """Wrap `model` with peft LoRA: the encoder is frozen, only the LoRA matrices and the head are trained."""
+    from peft import LoraConfig, TaskType, get_peft_model
+
+    # Copies: for SEQ_CLS, peft appends its default head names ("classifier", "score") to the modules_to_save
+    # list it receives, in place, which would corrupt the settings recorded in config.json
+    return get_peft_model(model, LoraConfig(
+        task_type=TaskType.SEQ_CLS,
+        r=lora["r"],
+        lora_alpha=lora["alpha"],
+        lora_dropout=lora["dropout"],
+        target_modules=list(lora["target_modules"]),
+        modules_to_save=list(lora["modules_to_save"]),
+    ))
+
+
+def count_parameters(model) -> tuple[int, int]:
+    """(trainable, total) parameters of the model used for prediction.
+
+    With LoRA, peft keeps a frozen copy of the original head (`original_module`) next to the trained one; that copy
+    is never used and not counted. Total = encoder + LoRA matrices + head.
+    """
+    params = [p for name, p in model.named_parameters() if ".original_module." not in name]
+    return sum(p.numel() for p in params if p.requires_grad), sum(p.numel() for p in params)
+
+
 def train_and_evaluate(config: dict) -> dict:
     """Fine-tune `config["model_name"]` on LEDGAR, evaluate on validation (and test if `eval_test`).
 
@@ -163,9 +222,6 @@ def train_and_evaluate(config: dict) -> dict:
     )
 
     config = {**DEFAULT_CONFIG, **config}
-    if config["lora"] is not None:
-        raise NotImplementedError("LoRA is task A7: config['lora'] must be None for full fine-tuning")
-
     set_seed(config["seed"])
     model_name = config["model_name"]
     run_id = make_run_id(short_model_name(model_name), config["variant"])
@@ -182,6 +238,14 @@ def train_and_evaluate(config: dict) -> dict:
         id2label=dict(enumerate(label_names)),
         label2id={name: i for i, name in enumerate(label_names)},
     )
+    if config["lora"] is not None:
+        n_full = sum(p.numel() for p in model.parameters())  # what full fine-tuning trains
+        config["lora"] = lora_settings(model, **config["lora"])
+        model = apply_lora(model, config["lora"])
+        n_trainable = count_parameters(model)[0]
+        print(f"LoRA r={config['lora']['r']} on {', '.join(config['lora']['target_modules'])} + head "
+              f"{', '.join(config['lora']['modules_to_save'])}: {n_trainable:,} trainable parameters = "
+              f"{100 * n_trainable / n_full:.2f} % of the {n_full:,} of full fine-tuning")
 
     device = _device()
     use_cuda = device == "cuda"
@@ -226,10 +290,11 @@ def train_and_evaluate(config: dict) -> dict:
     train_time_s = time.perf_counter() - start
 
     # Best epoch (validation macro-F1) is loaded back: predictions always on validation, test only on request
+    n_trainable, n_total = count_parameters(model)
     metrics = {
         "train_time_s": round(train_time_s, 1),
-        "n_trainable_params": sum(p.numel() for p in model.parameters() if p.requires_grad),
-        "n_total_params": sum(p.numel() for p in model.parameters()),
+        "n_trainable_params": n_trainable,
+        "n_total_params": n_total,
         "peak_gpu_memory_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1) if use_cuda else None,
     }
     splits = ["validation", "test"] if config["eval_test"] else ["validation"]
@@ -291,6 +356,9 @@ def evaluate_checkpoint(source_run: str, force: bool = False) -> dict:
 
     source_config, source_metrics = load_run(source_run)
     check_single_test_evaluation(source_run, force)
+    if source_config.get("lora"):
+        raise NotImplementedError(f"{source_run} is a LoRA run: its checkpoint holds only the adapter and the head; "
+                                  "LoRA runs predict the test set at training time (--eval-test)")
     if not source_config.get("best_checkpoint"):
         raise ValueError(f"No best_checkpoint in the config.json of {source_run}")
     # Saved relative to the repository root when inside it; an absolute path (Drive checkpoints folder) stays as is
@@ -350,4 +418,45 @@ def print_metrics(out: dict) -> None:
             print(f"{split:<12}{s['macro_f1']:>10.4f}{s['micro_f1']:>10.4f}{s['accuracy']:>10.4f}")
     gpu = f"{m['peak_gpu_memory_mb']:.0f} MB" if m["peak_gpu_memory_mb"] is not None else "n/a (no CUDA)"
     print(f"train time {m['train_time_s']:.0f} s | trainable params {m['n_trainable_params']:,} "
-          f"/ {m['n_total_params']:,} | peak GPU memory {gpu} | best epoch {out['config']['best_epoch']}")
+          f"/ {m['n_total_params']:,} ({100 * m['n_trainable_params'] / m['n_total_params']:.2f} %) "
+          f"| peak GPU memory {gpu} | best epoch {out['config']['best_epoch']}")
+
+
+def lora_tradeoff_table(full_run: str):
+    """Full fine-tuning vs LoRA trade-off (task A7), one row per run: `full_run`, then every LoRA run of the same
+    encoder on the full data found in results/runs/, by increasing r.
+
+    `pct_of_full` = trainable parameters / those of `full_run`. Warns when a LoRA run does not share the recipe of
+    `full_run` (`SHARED_RECIPE`; only the learning rate may differ). Differences are not tested here: paired tests
+    are task A8.
+    """
+    import pandas as pd
+
+    full_config, full_metrics = load_run(full_run)
+    lora_runs = []
+    for run_id in list_runs():
+        config, metrics = load_run(run_id)
+        if config.get("lora") and config["model_name"] == full_config["model_name"] and config["subset"] is None:
+            lora_runs.append((run_id, config, metrics))
+            diff = {k: (config.get(k), full_config.get(k))
+                    for k in SHARED_RECIPE if config.get(k) != full_config.get(k)}
+            if diff:
+                warnings.warn(f"{run_id} does not share the recipe of {full_run} (LoRA, full): {diff}")
+    lora_runs.sort(key=lambda run: (run[1]["lora"]["r"], run[0]))
+
+    rows = []
+    for run_id, config, metrics in [(full_run, full_config, full_metrics), *lora_runs]:
+        lora = config.get("lora")
+        rows.append({
+            "run_id": run_id,
+            "method": f"LoRA r={lora['r']}" if lora else "full fine-tuning",
+            "r": lora["r"] if lora else None,
+            "lr": config["lr"],
+            "trainable_params": metrics["n_trainable_params"],
+            "pct_of_full": 100 * metrics["n_trainable_params"] / full_metrics["n_trainable_params"],
+            "train_time_s": metrics["train_time_s"],
+            "peak_gpu_memory_mb": metrics["peak_gpu_memory_mb"],
+            **{f"{prefix}_{k}": metrics.get(split, {}).get(k)
+               for split, prefix in (("validation", "val"), ("test", "test")) for k in ("macro_f1", "accuracy")},
+        })
+    return pd.DataFrame(rows).astype({"r": "Int64"})

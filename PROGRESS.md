@@ -12,8 +12,9 @@ translated into English. `load_ledgar()` checked on the real data (60,000 / 10,0
 Stream A: full DistilBERT (A4) and Legal-BERT (A5) fine-tuned on Colab, validation macro-F1 0.7863 and 0.7930;
 `legal-bert_full_20261019-0916` selected on validation and evaluated once on test (A6): **test macro-F1 0.7905,
 accuracy 0.8717**. Team now works directly on `main` (no feature branches).
-**Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8); LoRA (A7) and
-MiniLM index (C) in parallel.**
+LoRA path (A7) implemented and checked locally (Legal-BERT r=8: 371,812 trainable parameters, 0.34 % of full FT).
+**Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8); LoRA r=8 run on
+Colab (A7) and MiniLM index (C) in parallel.**
 
 **Deadlines:**
 - code freeze: **Thursday 22 October 2026, 23:59** (internal margin);
@@ -56,6 +57,7 @@ MiniLM index (C) in parallel.**
 - [x] Single test evaluation from the best checkpoint (`scripts/evaluate_checkpoint.py`, single-use guard).
 - [x] Encoder screening on the validation set (DistilBERT vs Legal-BERT, 19/10).
 - [x] Final full fine-tuning run + single test evaluation (`legal-bert_final_20261019-1523`, 19/10).
+- [x] LoRA path (`--lora-r`) + trade-off table script, checked locally (19/10).
 - [ ] LoRA runs + trade-off table.
 - [ ] Paired tests (main comparison + secondary ones).
 - [ ] Tag `m4`.
@@ -187,8 +189,9 @@ before the first push.
    comparison A8 (Model A = `legal-bert_final_20261019-1523`).
 4. Robin: copy `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` from the Drive clone
    (gitignored, absent from local checkouts) to the machines running A8, A9 and C8.
-5. Robin: A7 LoRA on `nlpaueb/legal-bert-base-uncased` with the same recipe (`max_length` 256, 3 epochs) so that
-   full vs LoRA stays comparable.
+5. Robin: A7 — run notebook 04, section 10 (LoRA r=8 on `nlpaueb/legal-bert-base-uncased`, `--eval-test`, once),
+   commit its run folder, then `python scripts/lora_tradeoff_table.py --full-run legal-bert_final_20261019-1523`.
+   r = 4 and r = 16 only if GPU time allows.
 6. Team: confirm the `metrics.json` layout per split (see the 18/10 log entry) before B5 writes its first run.
 7. Parallel work: B2-B5 (EDA, TF-IDF), C1-C3 (index, queries).
 
@@ -201,6 +204,57 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 19 October 2026 — stream A: LoRA path and trade-off table script (A7 code, Robin)
+
+- **Code**: `config["lora"]` implemented in `src/models/transformer.py` with `peft`
+  (`LoraConfig(task_type=SEQ_CLS, r, lora_alpha=2r, lora_dropout=0.1)`). Target modules per architecture
+  (`LORA_TARGET_MODULES`, checked with `print(model)`): `query`/`value` (BERT, Legal-BERT), `q_lin`/`v_lin`
+  (DistilBERT), `query_proj`/`value_proj` (DeBERTa-v2/v3). The head is trained in full (`modules_to_save`): every
+  module of the task model outside the pretrained encoder, i.e. `classifier` for BERT, `pre_classifier` +
+  `classifier` for DistilBERT (peft's default would leave its randomly initialised `pre_classifier` frozen),
+  `pooler` + `classifier` for DeBERTa. The resolved settings are recorded in `config.json` (`lora` block).
+- **CLI**: `scripts/train_transformer.py --lora-r <r>`; the learning rate defaults to 5e-4 with `--lora-r`
+  (S06: 1e-4 to 1e-3), 5e-5 otherwise, unless `--lr` is given. The run prints its trainable parameters and their
+  share of full fine-tuning.
+- **Parameter counts** (`count_parameters`): peft keeps a frozen copy of the original head next to the trained one;
+  that copy is never used and not counted. For a LoRA run, `n_total_params` = encoder + LoRA matrices + head.
+- **Trade-off table**: `scripts/lora_tradeoff_table.py --full-run <run_id>` reads the full fine-tuning run and every
+  LoRA run of the same encoder on the full data, writes `results/lora_tradeoff.csv` and prints a markdown table
+  (trainable parameters, % of full, training time, peak GPU memory, validation / test macro-F1 and accuracy). It
+  warns when a LoRA run does not share the recipe of the full run (`max_length`, epochs, batch size, warmup,
+  weight decay, seed). Checked on the current runs: one row (`legal-bert_final_20261019-1523`), smoke runs
+  excluded; the CSV is written once the LoRA runs exist.
+- **Notebook 04, section 10**: one cell, LoRA r=8 on `nlpaueb/legal-bert-base-uncased` with the recipe of
+  `legal-bert_full_20261019-0916` (`max_length` 256, 3 epochs, batch 16, 10 % warmup, weight decay 0.01, seed 42);
+  only the learning rate changes (5e-4). `--eval-test`: LoRA runs are final models of the secondary comparison,
+  each evaluated once. r = 4 and r = 16 are added if GPU time allows; if they are not run, the secondary comparison
+  pre-registered in the README (r ∈ {4, 8, 16}) is reported with r = 8 only, as a stated deviation.
+- **Tests**: 5 new (tiny random BERT / DistilBERT, no download): r·(d_in + d_out) trainable parameters per targeted
+  matrix plus the head, only LoRA and head parameters trainable, output at step 0 = base model (B = 0), settings
+  not modified by peft, unknown architecture refused, trade-off table rows / filters / recipe warning.
+  `python -m pytest -q` → 19 passed.
+- **Local smoke run** `legal-bert_smoke-lora-r8_20261019-1822` (MPS, first 200 examples per split, 1 epoch =
+  13 steps, batch 16, `max_length` 256, lr 5e-4), Legal-BERT revision `15b570cb` (same as Colab):
+  - load report: only `classifier.weight` / `classifier.bias` are newly initialised (the pooler is pretrained),
+    so the head = `classifier`;
+  - **trainable parameters with r = 8: 371,812** = 147,456 (`lora_A`) + 147,456 (`lora_B`) + 76,900 (head)
+    = 12 layers × 2 matrices × 8 × (768 + 768) + 768 × 100 + 100, i.e. **0.34 % of the 109,559,140** of full
+    fine-tuning; `n_total_params` 109,854,052;
+  - the best checkpoint holds only the 24 `lora_A`, 24 `lora_B` and the classifier; every `lora_B` moved away from
+    its zero initialisation (norms 0.089 to 0.105);
+  - 24 s of training; training loss 4.681 → 4.498 over 13 steps (noisy); validation macro-F1 0.0016, accuracy
+    0.015, 9 distinct classes predicted: not a reportable score, the model has barely started.
+- **Extra check** (scratch, not in `results/`): same set-up for 10 epochs (130 steps) on the same 200 clauses:
+  training loss 4.719 → 3.408 (mean of the last 5 logged points 3.647), validation accuracy 0.015 → 0.075, loss
+  4.528 → 4.398. The LoRA path learns; at this scale it learns slowly, so whether 3 epochs at lr 5e-4 are enough
+  on the full data will be read on the Colab validation curve.
+- **Problems met**: (1) for `SEQ_CLS`, peft appends its default head names to the `modules_to_save` list it
+  receives, in place: the first smoke run recorded `["classifier", "classifier", "score"]` (the count was right,
+  `score` does not exist in BERT). Fixed by passing copies; that run was deleted and re-run. (2) The local process
+  did not exit after its results: transformers 5 starts a background thread that downloads the Hub's safetensors
+  conversion of `.bin`-only models (Legal-BERT), and it stalled. Both lessons in `tasks/lessons.md`.
+- A7 stays open until the Colab LoRA run(s) exist.
 
 ### 19 October 2026 — Git workflow: work directly on `main` (Robin)
 
