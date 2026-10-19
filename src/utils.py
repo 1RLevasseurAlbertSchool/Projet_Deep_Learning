@@ -49,6 +49,28 @@ def save_run(run_id: str, config: dict, metrics: dict) -> None:
     (run_dir / "metrics.json").write_text(json.dumps(metrics, indent=2, ensure_ascii=False))
 
 
+def load_run(run_id: str) -> tuple[dict, dict]:
+    """(config, metrics) of results/runs/<run_id>/."""
+    run_dir = RUNS_DIR / run_id
+    return (json.loads((run_dir / "config.json").read_text()),
+            json.loads((run_dir / "metrics.json").read_text()))
+
+
+def runs_with_test(source_run: str) -> list[str]:
+    """Runs that already predicted the test set with the model of `source_run`.
+
+    That is `source_run` itself (trained with --eval-test) or any run whose config.json records it as
+    `source_run` (scripts/evaluate_checkpoint.py), when its metrics.json has a "test" block.
+    """
+    found = []
+    for metrics_path in sorted(RUNS_DIR.glob("*/metrics.json")):
+        run_dir = metrics_path.parent
+        config = json.loads((run_dir / "config.json").read_text())
+        if source_run in (run_dir.name, config.get("source_run")) and "test" in json.loads(metrics_path.read_text()):
+            found.append(run_dir.name)
+    return found
+
+
 def save_predictions(run_id: str, split: str, labels, preds, probas) -> None:
     """Write results/predictions/<run_id>_<split>.parquet in the common format.
 

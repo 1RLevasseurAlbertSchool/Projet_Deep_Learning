@@ -86,8 +86,8 @@ python scripts/train_transformer.py --model distilbert-base-uncased --variant fu
 # A5 — one bigger encoder if GPU time allows (validation only)
 python scripts/train_transformer.py --model nlpaueb/legal-bert-base-uncased --variant full --lr 3e-5 --batch-size 16
 
-# A6 — final run of the encoder chosen ON VALIDATION, with the single test evaluation
-python scripts/train_transformer.py --model <chosen_model> --variant final --eval-test
+# A6 — single test evaluation of the run chosen ON VALIDATION, from its best checkpoint (no retraining)
+python scripts/evaluate_checkpoint.py --source-run <chosen_run_id>
 ```
 
 After each run, ask Claude Code:

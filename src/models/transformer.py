@@ -4,14 +4,16 @@ Usage:
     from src.models.transformer import token_length_stats, train_and_evaluate
     stats = token_length_stats("distilbert-base-uncased", texts)    # choice of max_length (A3)
     out = train_and_evaluate({**DEFAULT_CONFIG, "model_name": "distilbert-base-uncased", "variant": "smoke"})
+    out = evaluate_checkpoint("legal-bert_full_20261020-1430")     # single test evaluation (A6)
 
 Every run writes results/runs/<run_id>/ (config.json, metrics.json) and
 results/predictions/<run_id>_<split>.parquet through src.utils (interface contracts of CLAUDE.md).
-The test set is predicted only when config["eval_test"] is True: once per final model.
+The test set is predicted only when config["eval_test"] is True, or by evaluate_checkpoint: once per final model.
 """
 
 from __future__ import annotations
 
+import tempfile
 import time
 from pathlib import Path
 
@@ -20,7 +22,7 @@ import numpy as np
 from src.config import MODELS_DIR, NUM_LABELS, ROOT, SEED, TEXT_COL
 from src.data import get_label_names, load_ledgar
 from src.metrics import classification_metrics
-from src.utils import make_run_id, save_predictions, save_run, set_seed
+from src.utils import load_run, make_run_id, runs_with_test, save_predictions, save_run, set_seed
 
 DEFAULT_CONFIG = {
     "model_name": "distilbert-base-uncased",
@@ -39,6 +41,23 @@ DEFAULT_CONFIG = {
 }
 
 LENGTH_THRESHOLDS = (128, 256, 512)
+
+TEST_SET_WARNING = "\n".join([
+    "!" * 88,
+    "!! WARNING: this run predicts the TEST set. Evaluate it ONLY ONCE per final model,",
+    "!! after the model was chosen on VALIDATION. Never tune anything on these numbers.",
+    "!" * 88,
+])
+
+SINGLE_TEST_REASON = (
+    "The test set is evaluated only once so that its score stays an unbiased estimate on unseen data: every extra "
+    "look (re-run, comparison, keeping the best) is a decision taken on the test set and makes the reported score "
+    "optimistic (S01)."
+)
+
+
+class RepeatedTestEvaluationError(RuntimeError):
+    """The test set was already predicted with this model."""
 
 
 def token_length_stats(model_name: str, texts) -> dict:
@@ -81,6 +100,22 @@ def _repo_relative(path) -> str | None:
         return None
     path = Path(path).resolve()
     return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
+
+
+def tokenize_ledgar(ds, tokenizer, max_length: int):
+    """The model's own tokenizer, truncation at `max_length`; padding is left to the collator (per batch)."""
+    return ds.map(
+        lambda batch: tokenizer(batch[TEXT_COL], truncation=True, max_length=max_length),
+        batched=True,
+        remove_columns=[TEXT_COL],
+    )
+
+
+def _device() -> str:
+    """Device used by the Trainer (recorded in config.json)."""
+    import torch
+
+    return "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 
 def logits_to_predictions(logits) -> tuple[np.ndarray, np.ndarray]:
@@ -139,11 +174,7 @@ def train_and_evaluate(config: dict) -> dict:
     ds = load_ledgar(subset=config["subset"])
     label_names = get_label_names(ds)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenized = ds.map(
-        lambda batch: tokenizer(batch[TEXT_COL], truncation=True, max_length=config["max_length"]),
-        batched=True,
-        remove_columns=[TEXT_COL],
-    )
+    tokenized = tokenize_ledgar(ds, tokenizer, config["max_length"])
 
     model = AutoModelForSequenceClassification.from_pretrained(
         model_name,
@@ -152,8 +183,8 @@ def train_and_evaluate(config: dict) -> dict:
         label2id={name: i for i, name in enumerate(label_names)},
     )
 
-    use_cuda = torch.cuda.is_available()
-    device = "cuda" if use_cuda else "mps" if torch.backends.mps.is_available() else "cpu"
+    device = _device()
+    use_cuda = device == "cuda"
     run_dir = Path(config["output_dir"]) / run_id
     args = TrainingArguments(
         output_dir=str(run_dir),
@@ -222,3 +253,101 @@ def train_and_evaluate(config: dict) -> dict:
     }
     save_run(run_id, config, metrics)
     return {"run_id": run_id, "config": config, "metrics": metrics}
+
+
+def check_single_test_evaluation(source_run: str, force: bool = False) -> None:
+    """Single-use guard: raise if the test set was already predicted with the model of `source_run`.
+
+    With `force`, print a warning instead (e.g. to replace an evaluation broken by a bug) and go on.
+    """
+    previous = runs_with_test(source_run)
+    if not previous:
+        return
+    message = (f"the test set was already evaluated for {source_run} (run(s): {', '.join(previous)}). "
+               f"{SINGLE_TEST_REASON}")
+    if not force:
+        raise RepeatedTestEvaluationError(f"Refused: {message} Use --force only to replace a broken evaluation.")
+    print(f"\n!! --force: {message}\n!! Log in PROGRESS.md why the test set was re-evaluated and which result "
+          "is reported.\n")
+
+
+def evaluate_checkpoint(source_run: str, force: bool = False) -> dict:
+    """Predict validation and test with the best checkpoint of `source_run`, without retraining (task A6).
+
+    Same tokenisation as training: the tokenizer saved in the checkpoint, truncation at the source `max_length`,
+    padding per batch. Writes the new run `<model>_final_<timestamp>`: its config.json is the source config plus
+    `source_run` (`best_checkpoint` included); its metrics.json keeps the training cost and curves of the source run
+    (same weights) with fresh "validation" and "test" blocks. Returns {"run_id", "config", "metrics",
+    "source_metrics"}. Refuses when the test set was already predicted with this model, unless `force`.
+    """
+    import torch
+    from transformers import (
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+        DataCollatorWithPadding,
+        Trainer,
+        TrainingArguments,
+    )
+
+    source_config, source_metrics = load_run(source_run)
+    check_single_test_evaluation(source_run, force)
+    if not source_config.get("best_checkpoint"):
+        raise ValueError(f"No best_checkpoint in the config.json of {source_run}")
+    # Saved relative to the repository root when inside it; an absolute path (Drive checkpoints folder) stays as is
+    checkpoint = ROOT / source_config["best_checkpoint"]
+    if not checkpoint.is_dir():
+        raise FileNotFoundError(f"Best checkpoint of {source_run} not found: {checkpoint} "
+                                "(Drive mounted? checkpoints folder of the training machine?)")
+
+    set_seed(source_config["seed"])
+    run_id = make_run_id(short_model_name(source_config["model_name"]), "final")
+    ds = load_ledgar()
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    model = AutoModelForSequenceClassification.from_pretrained(checkpoint)
+    device = _device()
+    use_cuda = device == "cuda"
+
+    metrics = dict(source_metrics)
+    with tempfile.TemporaryDirectory() as tmp:  # the Trainer creates its output_dir; nothing is saved there
+        args = TrainingArguments(
+            output_dir=tmp,
+            per_device_eval_batch_size=2 * source_config["batch_size"],
+            fp16=use_cuda,  # same precision as the evaluations made during training
+            dataloader_pin_memory=use_cuda,
+            report_to="none",
+            seed=source_config["seed"],
+        )
+        trainer = Trainer(model=model, args=args, processing_class=tokenizer,
+                          data_collator=DataCollatorWithPadding(tokenizer))
+        for split in ("validation", "test"):
+            out = trainer.predict(tokenize_ledgar(ds[split], tokenizer, source_config["max_length"]))
+            metrics[split] = save_split_predictions(run_id, split, out.label_ids, out.predictions)
+
+    config = {
+        **source_config,  # model_name, max_length, hyperparameters, best_epoch, best_checkpoint
+        "variant": "final",
+        "subset": None,
+        "eval_test": True,
+        "run_id": run_id,
+        "source_run": source_run,
+        "device": device,
+        "gpu_name": torch.cuda.get_device_name(0) if use_cuda else None,
+        "fp16": use_cuda,
+        "n_examples": {split: len(ds[split]) for split in ("validation", "test")},
+    }
+    save_run(run_id, config, metrics)
+    return {"run_id": run_id, "config": config, "metrics": metrics, "source_metrics": source_metrics}
+
+
+def print_metrics(out: dict) -> None:
+    """Summary of a run returned by train_and_evaluate / evaluate_checkpoint."""
+    m = out["metrics"]
+    print(f"\nRun {out['run_id']}  (results/runs/{out['run_id']}/)")
+    print(f"{'split':<12}{'macro-F1':>10}{'micro-F1':>10}{'accuracy':>10}")
+    for split in ("validation", "test"):
+        if split in m:
+            s = m[split]
+            print(f"{split:<12}{s['macro_f1']:>10.4f}{s['micro_f1']:>10.4f}{s['accuracy']:>10.4f}")
+    gpu = f"{m['peak_gpu_memory_mb']:.0f} MB" if m["peak_gpu_memory_mb"] is not None else "n/a (no CUDA)"
+    print(f"train time {m['train_time_s']:.0f} s | trainable params {m['n_trainable_params']:,} "
+          f"/ {m['n_total_params']:,} | peak GPU memory {gpu} | best epoch {out['config']['best_epoch']}")
