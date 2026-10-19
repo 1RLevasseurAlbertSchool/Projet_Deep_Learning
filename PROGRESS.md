@@ -13,6 +13,9 @@ Stream A: full DistilBERT (A4) and Legal-BERT (A5) fine-tuned on Colab, validati
 `legal-bert_full_20261019-0916` selected on validation and evaluated once on test (A6): **test macro-F1 0.7905,
 accuracy 0.8717**. Team now works directly on `main` (no feature branches).
 LoRA path (A7) implemented and checked locally (Legal-BERT r=8: 371,812 trainable parameters, 0.34 % of full FT).
+Calibration (A9): the final model is over-confident (test ECE 0.0425, mean confidence 0.9131 for accuracy 0.8717);
+human-review threshold 0.892 chosen on validation → **78.9 % of the test clauses handled automatically at precision
+0.9489**.
 **Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8); LoRA r=8 run on
 Colab (A7) and MiniLM index (C) in parallel.**
 
@@ -58,6 +61,7 @@ Colab (A7) and MiniLM index (C) in parallel.**
 - [x] Encoder screening on the validation set (DistilBERT vs Legal-BERT, 19/10).
 - [x] Final full fine-tuning run + single test evaluation (`legal-bert_final_20261019-1523`, 19/10).
 - [x] LoRA path (`--lora-r`) + trade-off table script, checked locally (19/10).
+- [x] Calibration (ECE, reliability diagram) + human-review threshold of the final model (A9, 19/10).
 - [ ] LoRA runs + trade-off table.
 - [ ] Paired tests (main comparison + secondary ones).
 - [ ] Tag `m4`.
@@ -160,6 +164,50 @@ Run `legal-bert_final_20261019-1523` = `scripts/evaluate_checkpoint.py --source-
   The macro-F1 gap being about 4 times the micro-F1 gap suggests that the shortfall sits mostly on the rare
   classes.
 
+### Calibration and human-review threshold of the final model (A9, 19/10)
+
+`python scripts/calibration_report.py --run-id legal-bert_final_20261019-1523 --target-precision 0.95` →
+`results/calibration_legal-bert_final_20261019-1523.json`,
+`results/figures/reliability_legal-bert_final_20261019-1523.png`,
+`results/figures/coverage_legal-bert_final_20261019-1523.png`. Confidence = probability of the predicted class
+(`proba_pred`), i.e. **top-label** calibration; ECE over 15 equal-width bins.
+
+| Split | Clauses | Accuracy | Mean confidence | Confidence − accuracy | ECE (15 bins) |
+|---|---:|---:|---:|---:|---:|
+| Validation (2018) | 10,000 | 0.8729 | 0.9142 | +0.0413 | 0.0422 |
+| Test (2019) | 10,000 | 0.8717 | 0.9131 | +0.0414 | 0.0425 |
+
+Each threshold is **chosen on validation** (smallest threshold of a 0.001 grid whose validation precision reaches the
+target), then **applied unchanged to test**. Precision = accuracy on the clauses handled automatically (confidence ≥
+threshold); 95 % Wilson interval on test.
+
+| Target precision | Threshold (val.) | Val. coverage | Val. precision | Test coverage | Test precision [95 % CI] | Test clauses sent to review | Test errors sent to review |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 0.90 | 0.548 | 94.9 % | 0.9001 | 94.7 % | 0.8988 [0.8926; 0.9047] | 534 | 25.3 % |
+| **0.95 (recommended)** | **0.892** | 79.0 % | 0.9502 | **78.9 %** | **0.9489 [0.9438; 0.9536]** | 2,112 | 68.6 % |
+| 0.98 | 0.976 | 57.3 % | 0.9801 | 56.4 % | 0.9770 [0.9727; 0.9806] | 4,359 | 89.9 % |
+
+- **Over-confidence by bin**: in each of the 9 bins above 0.4 (9,854 validation / 9,861 test clauses), mean
+  confidence exceeds accuracy, by 0.021 to 0.130 (validation) and 0.023 to 0.151 (test). The top bin (0.933, 1]
+  holds 7,291 / 7,224 clauses: mean confidence 0.983, accuracy 0.963 / 0.960. Below 0.4 the bins hold at most 61 / 75
+  clauses (146 / 139 in total): their accuracy is noisy and falls on both sides of the diagonal.
+- **One year of drift (2018 → 2019)**: calibration is unchanged (ECE 0.0422 → 0.0425) and the test coverage stays
+  within 0.9 pt of validation at every threshold. The three test precisions are 0.0011 to 0.0030 below their target,
+  each target inside the 95 % interval: expected, since each threshold is the smallest that just reaches its target
+  on validation.
+- **Interpretation.** The model is **over-confident**: on the 2019 test set it is on average 0.913 sure of its label
+  but right 0.872 of the time (ECE 0.0425; validation 0.0422), and accuracy is below confidence in every bin above 0.4
+  — even in the top bin, which holds 72 % of the clauses, it says 0.983 and is right 0.960 of the time. With the
+  recommended threshold of 0.892 (chosen on validation for 95 % precision), a law firm reviewing 10,000 clauses would
+  let the model label 7,888 of them (78.9 %) on its own, 94.9 % of them correctly [95 % CI 94.4 %; 95.4 %], and send
+  2,112 to a lawyer; those 2,112 contain 68.6 % of the model's errors, while 403 wrong labels (5.1 % of the automatic
+  ones) would go through unreviewed.
+- **Limitations**: (1) no temperature scaling — the common prediction format stores only `proba_pred` and `top5`, not
+  the full probability matrix (or logits) that temperature scaling is fitted on; (2) top-label calibration only: it
+  says nothing about the 99 other probabilities, nor about the reliability of the `top5` suggestions; (3) one global
+  threshold for the 100 classes: the precision per class at that threshold was not measured (rare classes may sit
+  well below 0.95); (4) the ECE depends on the binning, and 72-73 % of the clauses fall in the last of the 15 bins.
+
 ## 4. Problems met and solutions
 
 ### `python -m src.data` fails outside the project environment (18/10)
@@ -188,7 +236,7 @@ before the first push.
 3. Amandine: B5 (TF-IDF + LogReg, predictions in the common format) — it unblocks the pre-registered main
    comparison A8 (Model A = `legal-bert_final_20261019-1523`).
 4. Robin: copy `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` from the Drive clone
-   (gitignored, absent from local checkouts) to the machines running A8, A9 and C8.
+   (gitignored, absent from local checkouts) to the machines running A8 and C8 (done on Robin's laptop for A9).
 5. Robin: A7 — run notebook 04, section 10 (LoRA r=8 on `nlpaueb/legal-bert-base-uncased`, `--eval-test`, once),
    commit its run folder, then `python scripts/lora_tradeoff_table.py --full-run legal-bert_final_20261019-1523`.
    r = 4 and r = 16 only if GPU time allows.
@@ -204,6 +252,34 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 19 October 2026 — stream A: calibration and human-review threshold (A9, Robin)
+
+- **Code**: `src/calibration.py` — `calibration_bins` (15 equal-width bins (low, high]), `expected_calibration_error`,
+  `coverage_precision_curve` (per threshold: coverage, precision = accuracy on the clauses handled automatically,
+  share of the errors sent to review), `select_threshold` (smallest threshold of a 0.001 grid reaching the target
+  precision, `None` if none does), `operating_point` (+ 95 % Wilson interval of the precision), `calibration_report`,
+  `reliability_diagram`, `coverage_precision_figure`. CLI: `scripts/calibration_report.py --run-id <run>
+  --target-precision 0.95` (the 0.90 and 0.98 targets are also reported, `--also-report`).
+- **Protocol**: every threshold is chosen on validation only, then applied as is to test; the test predictions are
+  only read, the model is not re-evaluated.
+- **Run** on `legal-bert_final_20261019-1523` (its two prediction files copied from the Drive clone): recommended
+  threshold **0.892** (target precision 0.95 on validation) → test coverage **78.9 %**, test precision **0.9489**
+  [0.9438; 0.9536]; ECE 0.0422 (validation) / 0.0425 (test). Full tables in section 3. The JSON also stores the
+  15 bins of each split (data of the reliability diagram).
+- **Deviation from prompt P4**: no temperature scaling (`fit_temperature` not written). The prediction files of the
+  common format hold only `proba_pred` and `top5`, not the full probability matrix that temperature scaling needs:
+  calibration is measured on the probability of the predicted class only (top-label calibration). Adding it would
+  require re-predicting validation and test from the checkpoint on Colab with the logits saved, and fitting the
+  temperature on validation; it would not change the predicted class (so neither accuracy nor macro-F1), only the
+  confidences and therefore the thresholds.
+- **Interpretation**: the model is over-confident (mean confidence 0.913 vs accuracy 0.872 on test, accuracy below
+  confidence in every bin above 0.4). At the recommended threshold, a firm would have 78.9 % of the clauses labelled
+  automatically at 94.9 % precision and 21.1 % sent to a lawyer, who would see 68.6 % of the model's errors.
+- **Tests**: 8 new in `tests/test_calibration.py` (synthetic data): ECE < 0.01 on 200,000 perfectly calibrated
+  draws, exact ECE values, bin edges, threshold 0 → coverage 1, smallest threshold reaching the target (and `None`
+  when unreachable), operating-point counts and interval, threshold chosen on validation and read on test, figures
+  written. `python -m pytest -q` → 27 passed.
 
 ### 19 October 2026 — stream A: LoRA path and trade-off table script (A7 code, Robin)
 

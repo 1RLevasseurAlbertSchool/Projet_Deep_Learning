@@ -26,7 +26,7 @@
 | [x] A6 | Choice of the final model **on validation**, final run, **single test evaluation** | `results/runs/<final>/`, test predictions | Sun 18/10 | A5 |
 | [ ] A7 | LoRA (r = 4, 8, 16; α = 2r; query/value) on the same encoder | trade-off table (params, time, memory, macro-F1) | Mon 19/10 | A6 |
 | [ ] A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM | `results/paired_tests.csv` → **tag m4** | Mon 19/10 | A6, A7, B4, B6 |
-| [ ] A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision) | figure + table | Tue 20/10 | A6 |
+| [x] A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision) | figure + table | Tue 20/10 | A6 |
 | [ ] A10 | README results section, PR reviews, tag `v1.0`, test on a fresh clone | final README | Thu 22/10 | all |
 
 ## Stream B — Amandine: Data, baselines, RNN

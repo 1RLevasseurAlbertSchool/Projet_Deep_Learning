@@ -133,9 +133,10 @@ upgrade the `ipykernel` / `jupyter-client` versions pinned by `google-colab`), t
 │   ├── data.py            # LEDGAR loading + label names (shared interface contract)
 │   ├── metrics.py         # Macro-F1, per-class F1, paired bootstrap, McNemar
 │   ├── utils.py           # Seed, saving runs
+│   ├── calibration.py     # Stream A: ECE, reliability diagram, human-review threshold
 │   ├── models/            # Streams A and B: TF-IDF, LSTM, HF fine-tuning, LoRA
 │   ├── retrieval/         # Stream C: sentence-transformer index, BM25, hybrid
-│   └── audit/             # Stream C: slices, counterfactual perturbations, calibration
+│   └── audit/             # Stream C: slices, counterfactual perturbations
 ├── scripts/               # Command-line entry points (training, evaluation)
 ├── eval/                  # Hand-built sets: lawyer questions, counterfactuals, out-of-distribution
 ├── tests/                 # Unit tests (pytest), e.g. metrics checked against the course exercises
