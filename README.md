@@ -80,8 +80,8 @@ first results; any deviation from the protocol will be stated explicitly in [`PR
 | BERT-class (full FT) | | | | | |
 | BERT-class + LoRA | | | | | |
 
-| Retrieval | P@5 (same type) | MRR | Manual queries passed |
-|---|---:|---:|---:|
+| Retrieval | P@5 (same type) | MRR@10 | nDCG@10 | Manual queries judged |
+|---|---:|---:|---:|---:|
 | `all-MiniLM-L6-v2` | | | |
 
 ## What the system must not do

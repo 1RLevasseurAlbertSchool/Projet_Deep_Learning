@@ -59,38 +59,55 @@ class DenseRetriever:
 
     def search(self, query: str, k: int = 5) -> list[dict]:
         """Return the top-k clauses with ``idx``, text, label, label_name and cosine score."""
-        if not isinstance(query, str) or not query.strip():
-            raise ValueError("query must be a non-empty string")
+        return self.search_many([query], k=k)[0]
+
+    def search_many(self, queries: list[str], k: int = 5) -> list[list[dict]]:
+        """Search multiple queries in one encoder and matrix-multiplication batch."""
         if not isinstance(k, int) or isinstance(k, bool) or k < 1:
             raise ValueError("k must be a positive integer")
+        if not queries:
+            return []
+        if any(not isinstance(query, str) or not query.strip() for query in queries):
+            raise ValueError("every query must be a non-empty string")
 
         encoded = self.encoder.encode(
-            [query],
+            queries,
             convert_to_numpy=True,
             normalize_embeddings=True,
-            show_progress_bar=False,
+            show_progress_bar=len(queries) > 1,
         )
-        query_vector = np.asarray(encoded, dtype=np.float32)
-        if query_vector.ndim != 2 or query_vector.shape != (1, self.embeddings.shape[1]):
+        query_vectors = np.array(encoded, dtype=np.float32, copy=True)
+        if query_vectors.ndim != 2 or query_vectors.shape != (len(queries), self.embeddings.shape[1]):
             raise ValueError("Query embedding dimension does not match the clause bank")
-        if not np.isfinite(query_vector).all():
+        if not np.isfinite(query_vectors).all():
             raise ValueError("Query embedding contains non-finite values")
-        query_norm = np.linalg.norm(query_vector)
-        if query_norm == 0:
-            raise ValueError("Query embedding is a zero vector")
+        query_norms = np.linalg.norm(query_vectors, axis=1, keepdims=True)
+        if np.any(query_norms == 0):
+            raise ValueError("Query embedding contains a zero vector")
 
-        scores = self.embeddings @ (query_vector[0] / query_norm)
-        top_indices = np.argsort(-scores, kind="stable")[: min(k, len(self.bank))]
+        query_vectors /= query_norms
+        n_results = min(k, len(self.bank))
         results = []
-        for row in top_indices:
-            clause = self.bank.iloc[row]
-            results.append({
-                "idx": int(clause["idx"]),
-                "text": clause["text"],
-                "label": int(clause["label"]),
-                "label_name": clause["label_name"],
-                "score": float(scores[row]),
-            })
+        for start in range(0, len(queries), 128):
+            batch_scores = query_vectors[start : start + 128] @ self.embeddings.T
+            for scores in batch_scores:
+                if n_results == len(self.bank):
+                    candidate_rows = np.arange(len(self.bank))
+                else:
+                    candidate_rows = np.argpartition(-scores, n_results - 1)[:n_results]
+                order = np.lexsort((candidate_rows, -scores[candidate_rows]))
+                ranked_rows = candidate_rows[order]
+                query_results = []
+                for row in ranked_rows:
+                    clause = self.bank.iloc[row]
+                    query_results.append({
+                        "idx": int(clause["idx"]),
+                        "text": clause["text"],
+                        "label": int(clause["label"]),
+                        "label_name": clause["label_name"],
+                        "score": float(scores[row]),
+                    })
+                results.append(query_results)
         return results
 
 

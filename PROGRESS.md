@@ -22,7 +22,7 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 (4 tail, 5 middle, 2 head); rare classes pay in coverage and hidden errors instead (tail clauses 63.2 % automatic vs
 88.4 % head, and 14.2 % of the automatic ones wrong vs 2.6 %).
 **Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8,
-`scripts/paired_tests.py` ready); LSTM predictions (B6) for the third pair; MiniLM index (C) in parallel.**
+`scripts/paired_tests.py` ready); LSTM predictions (B6) for the third pair; retrieval benchmark execution (C).**
 
 **Deadlines:**
 - code freeze: **Thursday 22 October 2026, 23:59** (internal margin);
@@ -75,8 +75,11 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 - [ ] Tag `m4`.
 
 ### Retrieval and audit (Brian)
-- [ ] Automatic retrieval evaluation + lawyer question set.
-- [ ] Hybrid BM25 + dense.
+- [x] C1 implementation: cached, normalized dense index with batched cosine search.
+- [x] C2 notebook: 10 qualitative m2 searches prepared (5 lawyer questions + 5 validation clauses).
+- [x] C3 draft: 28 lawyer questions, including numeric and jurisdiction constraints; relevance judgments are pending.
+- [x] C4/C5 implementation: same-label ranking metrics, three-encoder comparison workflow, BM25 and RRF hybrid.
+- [ ] Run retrieval notebooks, review the 10 m2 searches, judge C3 candidates, and generate `results/retrieval_summary.csv`.
 - [ ] Per-slice audit + counterfactuals + out-of-distribution.
 - [ ] Model card.
 

@@ -6,5 +6,6 @@ then call ``retriever.search(query, k=5)``. Results contain ``idx``, ``text``,
 """
 
 from src.retrieval.dense import DenseRetriever, build_dense_index
+from src.retrieval.hybrid import BM25Retriever, HybridRetriever
 
-__all__ = ["DenseRetriever", "build_dense_index"]
+__all__ = ["BM25Retriever", "DenseRetriever", "HybridRetriever", "build_dense_index"]
