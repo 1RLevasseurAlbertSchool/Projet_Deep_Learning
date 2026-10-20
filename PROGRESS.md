@@ -80,8 +80,11 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 - [x] C3 draft: 28 lawyer questions, including numeric and jurisdiction constraints; relevance judgments are pending.
 - [x] C4/C5 implementation: same-label ranking metrics, three-encoder comparison workflow, BM25 and RRF hybrid.
 - [ ] Run retrieval notebooks, review the 10 m2 searches, judge C3 candidates, and generate `results/retrieval_summary.csv`.
-- [ ] Per-slice audit + counterfactuals + out-of-distribution.
-- [ ] Model card.
+- [x] C6/C7 implementation prepared: train-defined frequency/length slices, role heuristics, generated counterfactuals,
+  and a clearly labelled synthetic OOD probe set.
+- [x] C8 notebook prepared for saved test predictions, final checkpoint inference, slice metrics, counterfactual and
+  retrieval stability outputs; C6-C8 results remain pending teammate artifacts and execution.
+- [x] C9 model card updated with audit methodology and limitations; measured audit fields remain pending.
 
 ### Delivery
 - [ ] README results section filled with real results.
