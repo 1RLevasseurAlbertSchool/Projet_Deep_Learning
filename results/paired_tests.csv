@@ -1,0 +1,2 @@
+model_a,model_b,split,variant,exclude_idx_file,n,macro_f1_a,macro_f1_b,delta_macro_f1,ci95_low,ci95_high,significant,p_a_not_better,n_boot,seed,accuracy_a,accuracy_b,b,c,mcnemar_p_value,mcnemar_method
+legal-bert_final_20261019-1523,legal-bert_lora-r8_20261020-0940,test,all,,10000,0.7905413634511171,0.7691035643520298,0.021437799099087385,0.012615980343789208,0.036473691676094135,True,0.0,1000,42,0.8717,0.8527,377,187,1.7436880172781797e-15,chi2_cc

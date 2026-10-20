@@ -24,9 +24,9 @@
 | [x] A4 | DistilBERT on the full training set, **validation** evaluation | run + loss / macro-F1 curves | Fri 16/10 | A2 |
 | [x] A5 | Screening `nlpaueb/legal-bert-base-uncased` and/or `microsoft/deberta-v3-base` (validation) | screening table | Sat 17/10 | A4 |
 | [x] A6 | Choice of the final model **on validation**, final run, **single test evaluation** | `results/runs/<final>/`, test predictions | Sun 18/10 | A5 |
-| [ ] A7 | LoRA (r = 4, 8, 16; α = 2r; query/value) on the same encoder | trade-off table (params, time, memory, macro-F1) | Mon 19/10 | A6 |
-| [ ] A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM | `results/paired_tests.csv` → **tag m4** | Mon 19/10 | A6, A7, B4, B6 |
-| [x] A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision) | figure + table | Tue 20/10 | A6 |
+| [x] A7 | LoRA (r = 4, 8, 16; α = 2r; query/value) on the same encoder — **deviation: r = 8 only** (`legal-bert_lora-r8_20261020-0940`, 20/10); r = 4 / 16 not run unless GPU time allows | trade-off table (params, time, memory, adapter size, macro-F1): `results/lora_tradeoff.csv` | Mon 19/10 | A6 |
+| [ ] A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM — script and full vs LoRA r=8 done (20/10); main and LSTM pairs wait for stream B's test predictions | `scripts/paired_tests.py`, `results/paired_tests.csv` → **tag m4** | Mon 19/10 | A6, A7, B4, B5, B6 |
+| [x] A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision); per-class precision at the recommended threshold (test, head / middle / tail by training-frequency terciles) | figure + table; `results/calibration_per_class_<run_id>.csv` + `precision_per_class_at_threshold.png` | Tue 20/10 | A6 |
 | [ ] A10 | README results section, PR reviews, tag `v1.0`, test on a fresh clone | final README | Thu 22/10 | all |
 
 ## Stream B — Amandine: Data, baselines, RNN

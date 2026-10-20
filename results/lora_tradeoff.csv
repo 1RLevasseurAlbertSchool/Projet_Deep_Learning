@@ -1,0 +1,3 @@
+run_id,method,r,lr,trainable_params,pct_of_full,train_time_s,peak_gpu_memory_mb,val_macro_f1,val_accuracy,test_macro_f1,test_accuracy
+legal-bert_final_20261019-1523,full fine-tuning,,3e-05,109559140,100.0,2688.2,3106.2,0.7929576729219819,0.8729,0.7905413634511171,0.8717
+legal-bert_lora-r8_20261020-0940,LoRA r=8,8,0.0005,371812,0.33937104654162126,2021.5,1889.0,0.7552030520549203,0.8524,0.7691035643520298,0.8527
