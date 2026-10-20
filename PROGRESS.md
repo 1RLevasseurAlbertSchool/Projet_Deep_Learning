@@ -22,7 +22,7 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 (4 tail, 5 middle, 2 head); rare classes pay in coverage and hidden errors instead (tail clauses 63.2 % automatic vs
 88.4 % head, and 14.2 % of the automatic ones wrong vs 2.6 %).
 **Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8,
-`scripts/paired_tests.py` ready); LSTM predictions (B6) for the third pair; MiniLM index (C) in parallel.**
+`scripts/paired_tests.py` ready); LSTM predictions (B6) for the third pair; retrieval benchmark execution (C).**
 
 **Deadlines:**
 - code freeze: **Thursday 22 October 2026, 23:59** (internal margin);
@@ -49,8 +49,9 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 - [ ] Tag `m1`.
 
 ### m2 — Retrieval index (Brian)
-- [ ] `all-MiniLM-L6-v2` index over the clause bank.
-- [ ] 10 queries checked by hand.
+- [x] Implemented reusable MiniLM dense retrieval with normalised cosine search and a validated embedding cache.
+- [x] Created notebook 02 with 10 qualitative searches (5 lawyer questions + 5 validation clauses).
+- [ ] Run notebook on the full LEDGAR data, build the index, and complete the 10 manual relevance checks.
 - [ ] Tag `m2`.
 
 ### m3 — LSTM and error analysis (Amandine)
@@ -74,10 +75,16 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 - [ ] Tag `m4`.
 
 ### Retrieval and audit (Brian)
-- [ ] Automatic retrieval evaluation + lawyer question set.
-- [ ] Hybrid BM25 + dense.
-- [ ] Per-slice audit + counterfactuals + out-of-distribution.
-- [ ] Model card.
+- [x] C1 implementation: cached, normalized dense index with batched cosine search.
+- [x] C2 notebook: 10 qualitative m2 searches prepared (5 lawyer questions + 5 validation clauses).
+- [x] C3 draft: 28 lawyer questions, including numeric and jurisdiction constraints; relevance judgments are pending.
+- [x] C4/C5 implementation: same-label ranking metrics, three-encoder comparison workflow, BM25 and RRF hybrid.
+- [ ] Run retrieval notebooks, review the 10 m2 searches, judge C3 candidates, and generate `results/retrieval_summary.csv`.
+- [x] C6/C7 implementation prepared: train-defined frequency/length slices, role heuristics, generated counterfactuals,
+  and a clearly labelled synthetic OOD probe set.
+- [x] C8 notebook prepared for saved test predictions, final checkpoint inference, slice metrics, counterfactual and
+  retrieval stability outputs; C6-C8 results remain pending teammate artifacts and execution.
+- [x] C9 model card updated with audit methodology and limitations; measured audit fields remain pending.
 
 ### Delivery
 - [ ] README results section filled with real results.
