@@ -12,14 +12,17 @@ translated into English. `load_ledgar()` checked on the real data (60,000 / 10,0
 Stream A: full DistilBERT (A4) and Legal-BERT (A5) fine-tuned on Colab, validation macro-F1 0.7863 and 0.7930;
 `legal-bert_full_20261019-0916` selected on validation and evaluated once on test (A6): **test macro-F1 0.7905,
 accuracy 0.8717**. Team now works directly on `main` (no feature branches).
-LoRA path (A7) implemented and checked locally (Legal-BERT r=8: 371,812 trainable parameters, 0.34 % of full FT).
+LoRA r=8 on Legal-BERT (A7, Colab, same recipe): 371,812 trainable parameters (0.34 % of full FT), adapter of
+1.49 MB on disk vs 438.3 MB, −24.8 % training time, −39.2 % peak GPU memory, **test macro-F1 0.7691 vs 0.7905**; the
+paired test (A8, secondary comparison) finds full FT significantly better: **ΔF1 = +0.0214 [+0.0126; +0.0365]**,
+McNemar p = 1.7e-15. Only r = 8 was run (pre-registered: r ∈ {4, 8, 16}).
 Calibration (A9): the final model is over-confident (test ECE 0.0425, mean confidence 0.9131 for accuracy 0.8717);
 human-review threshold 0.892 chosen on validation → **78.9 % of the test clauses handled automatically at precision
 0.9489**. Per class at that threshold: 11 classes below 0.90 precision (9 with ≥ 20 automatic labels), not mostly tail
 (4 tail, 5 middle, 2 head); rare classes pay in coverage and hidden errors instead (tail clauses 63.2 % automatic vs
 88.4 % head, and 14.2 % of the automatic ones wrong vs 2.6 %).
-**Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8); LoRA r=8 run on
-Colab (A7) and MiniLM index (C) in parallel.**
+**Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8,
+`scripts/paired_tests.py` ready); LSTM predictions (B6) for the third pair; MiniLM index (C) in parallel.**
 
 **Deadlines:**
 - code freeze: **Thursday 22 October 2026, 23:59** (internal margin);
@@ -65,8 +68,9 @@ Colab (A7) and MiniLM index (C) in parallel.**
 - [x] LoRA path (`--lora-r`) + trade-off table script, checked locally (19/10).
 - [x] Calibration (ECE, reliability diagram) + human-review threshold of the final model (A9, 19/10), with the
   per-class precision at the recommended threshold (head / middle / tail).
-- [ ] LoRA runs + trade-off table.
-- [ ] Paired tests (main comparison + secondary ones).
+- [x] LoRA run + trade-off table (A7, 20/10) — r = 8 only, r = 4 / 16 not run (stated deviation).
+- [ ] Paired tests (main comparison + secondary ones): script done, full FT vs LoRA r=8 done (20/10); BERT vs TF-IDF
+  (main) and BERT vs LSTM wait for stream B's prediction files.
 - [ ] Tag `m4`.
 
 ### Retrieval and audit (Brian)
@@ -263,7 +267,72 @@ least 20 such automatic labels. Frequency group = tercile of the class's trainin
   was measured on test only after the threshold was fixed; (4) the ECE depends on the binning, and 72-73 % of the
   clauses fall in the last of the 15 bins.
 
+### Full fine-tuning vs LoRA (A7, 20/10) and paired test (A8, secondary comparison)
+
+Run `legal-bert_lora-r8_20261020-0940` (notebook 04, section 10): `nlpaueb/legal-bert-base-uncased` (revision
+`15b570cb`), LoRA r = 8, α = 16, dropout 0.1 on `query` / `value` of the 12 layers, `classifier` trained in full;
+recipe of the full run (`max_length` 256, 3 epochs, batch 16, 10 % warmup, weight decay 0.01, seed 42, 11,250 steps),
+only the learning rate differs (5e-4 vs 3e-5); Colab T4, fp16, transformers 5.20.1, peft 0.21.2; `--eval-test`, test
+evaluated once. `python scripts/lora_tradeoff_table.py --full-run legal-bert_final_20261019-1523` →
+`results/lora_tradeoff.csv` (no recipe warning):
+
+| Run | Method | lr | Trainable params | % of full | Train time | Peak GPU memory | Weights on disk | Val macro-F1 | Val accuracy | Test macro-F1 | Test accuracy |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `legal-bert_final_20261019-1523` | full fine-tuning | 3e-5 | 109,559,140 | 100.00 | 2,688.2 s (44.8 min) | 3,106.2 MB | 438.3 MB | **0.7930** | **0.8729** | **0.7905** | **0.8717** |
+| `legal-bert_lora-r8_20261020-0940` | LoRA r=8 | 5e-4 | 371,812 | 0.34 | 2,021.5 s (33.7 min) | 1,889.0 MB | 1.49 MB | 0.7552 | 0.8524 | 0.7691 | 0.8527 |
+| LoRA − full | | | ÷ 295 | | −24.8 % | −1,217.2 MB (−39.2 %) | ÷ 293 | −0.0378 | −0.0205 | −0.0214 | −0.0190 |
+
+- **Weights on disk**: `adapter_model.safetensors` = **1,494,128 bytes** (50 tensors: 24 `lora_A`, 24 `lora_B`, the
+  classifier weight and bias; 371,812 fp32 parameters) vs `model.safetensors` = **438,260,096 bytes** for the full
+  model (109,559,140 fp32 parameters): the adapter is **0.34 %** of the full file. The Colab checkpoints are on Drive,
+  so both sizes were measured locally on files with the same tensors: the adapter of the local smoke run
+  `legal-bert_smoke-lora-r8_20261019-1822` (same encoder, r, targets and head) and a 100-label Legal-BERT saved with
+  `save_pretrained` (same architecture as the full checkpoint); a safetensors file is 4 bytes per fp32 parameter plus a
+  small header, so the sizes carry over. Serving a LoRA model still needs the shared pretrained Legal-BERT; the
+  adapter is what has to be stored per fine-tuned model. Optimizer states in the checkpoint folders are not counted.
+- **LoRA was still improving at epoch 3**: validation macro-F1 0.6955 → 0.7353 → **0.7552** (+0.0199 from epoch 2 to
+  3), accuracy 0.8165 → 0.8421 → 0.8524, loss 0.659 → 0.582 → 0.542; best epoch = last epoch (`checkpoint-11250`).
+  Training loss 4.514 (step 225) → 0.489 (step 11,250), vs 0.329 for full FT. The full run was also still improving
+  (+0.0209), and the validation gap did not shrink over the epochs (−0.0296, −0.0367, −0.0378): with 3 epochs we
+  cannot tell whether LoRA would catch up with a longer schedule.
+- **Test above validation for LoRA** (macro-F1 +0.0139; accuracy +0.0003), while full FT loses 0.0024: the macro-F1
+  gap shrinks from −0.0378 (validation) to −0.0214 (test). Part of it is one rare class: 14 `Books` has 2 test clauses
+  (none in validation); LoRA labels both right (F1 = 1) and full FT neither (F1 = 0), i.e. +0.01 of macro-F1 for LoRA
+  from 2 clauses. Conversely, LoRA never predicts 4 `Applicable Laws` (53 test clauses; full FT: 1 right).
+- **Per class (test)**: full FT is better on 80 classes, LoRA on 16, equal on 4; both predict 98 distinct classes. The
+  two models agree on 92.9 % of the test clauses.
+
+**Paired test** (pre-registered protocol: paired bootstrap on macro-F1, 1,000 resamples, seed 42, 95 % CI; McNemar
+on accuracy). `python scripts/paired_tests.py --pair legal-bert_final_20261019-1523 legal-bert_lora-r8_20261020-0940`
+→ `results/paired_tests.csv`. ΔF1 = F1(full) − F1(LoRA) on the 10,000 test clauses:
+
+| A | B | n | Macro-F1 A | Macro-F1 B | ΔF1 [95 % CI] | Significant | Accuracy A | Accuracy B | b (A right, B wrong) | c (A wrong, B right) | McNemar p |
+|---|---|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|
+| full FT | LoRA r=8 | 10,000 | 0.7905 | 0.7691 | **+0.0214 [+0.0126; +0.0365]** | yes | 0.8717 | 0.8527 | 377 | 187 | 1.7e-15 (χ² = 63.3, with continuity correction) |
+
+- **Result**: full fine-tuning is significantly better than LoRA r = 8 on both metrics: the 95 % interval of ΔF1
+  excludes 0 (LoRA never matches full FT in the 1,000 resamples) and full FT is right on 377 clauses where LoRA is
+  wrong vs 187 the other way. The trade-off is therefore real: −2.1 pt macro-F1 and −1.9 pt accuracy for 0.34 % of
+  the trainable parameters, a 293 × smaller file, −25 % training time and −39 % GPU memory.
+- The interval is asymmetric around +0.0214: macro-F1 averages 100 classes, some with 2 to 10 test clauses, whose
+  F1 jumps when they are resampled.
+- **Deviations from the pre-registered secondary comparison** (README: r ∈ {4, 8, 16}): only r = 8 was run; r = 4
+  and r = 16 can be added later (same cell, `--lora-r 4` / `16`, each evaluated once). The two runs share every
+  setting but the learning rate (5e-4 for LoRA, 3e-5 for full FT, each in the S06 range of its method); the full run
+  used transformers 5.18.0 and the LoRA run 5.20.1 (Colab image update).
+
 ## 4. Problems met and solutions
+
+### `peft` fails to import on Colab: incompatible `torchao` (20/10)
+
+**Symptom:** on Colab, the LoRA path (notebook 04, section 10) failed with
+`ImportError: Found an incompatible version of torchao (0.10.0, need > 0.16.0)` raised by `peft`.
+**Cause:** Colab preinstalls `torchao` 0.10.0. `peft` (`import_utils.is_torchao_available`) raises an `ImportError`
+when `torchao` is installed but older than 0.16.0, instead of treating it as absent; the project never uses `torchao`
+(it is not in `requirements.txt`).
+**Solution:** notebook 04, install cell: `!pip uninstall -y -q torchao` after `pip install -r requirements.txt`. No
+change to `requirements.txt`.
+**Status:** ✅ solved in the notebook.
 
 ### `python -m src.data` fails outside the project environment (18/10)
 
@@ -289,12 +358,15 @@ before the first push.
 1. Robin: add Amandine and Brian as collaborators on GitHub (if not done yet).
 2. Everyone: work on `main`, `git pull` before starting (see `CLAUDE.md`, Git section).
 3. Amandine: B5 (TF-IDF + LogReg, predictions in the common format) — it unblocks the pre-registered main
-   comparison A8 (Model A = `legal-bert_final_20261019-1523`).
-4. Robin: copy `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` from the Drive clone
-   (gitignored, absent from local checkouts) to the machines running A8 and C8 (done on Robin's laptop for A9).
-5. Robin: A7 — run notebook 04, section 10 (LoRA r=8 on `nlpaueb/legal-bert-base-uncased`, `--eval-test`, once),
-   commit its run folder, then `python scripts/lora_tradeoff_table.py --full-run legal-bert_final_20261019-1523`.
-   r = 4 and r = 16 only if GPU time allows.
+   comparison A8 (Model A = `legal-bert_final_20261019-1523`). Then Robin runs
+   `python scripts/paired_tests.py --pair legal-bert_final_20261019-1523 <tfidf_run_id>` (and the same with the LSTM
+   run of B6), adding `--exclude-idx <file>` once the near-duplicate test idx of B4 exist. Needed in
+   `results/predictions/`: `<tfidf_run_id>_test.parquet` and `<lstm_run_id>_test.parquet` (gitignored: copy them).
+4. Robin: copy `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` and
+   `legal-bert_lora-r8_20261020-0940_{validation,test}.parquet` from the Drive clone (gitignored, absent from local
+   checkouts) to the machines running A8 and C8 (done on Robin's laptop).
+5. Robin (optional, if GPU time allows): LoRA r = 4 and r = 16 (notebook 04, section 10, `--lora-r 4` / `16`, once
+   each), then re-run the trade-off table and the full vs LoRA paired tests.
 6. Team: confirm the `metrics.json` layout per split (see the 18/10 log entry) before B5 writes its first run.
 7. Parallel work: B2-B5 (EDA, TF-IDF), C1-C3 (index, queries).
 8. Brian: C6 / C8 — take the head / middle / tail slice from `src.data.frequency_groups` (already used by A9) so that
@@ -309,6 +381,44 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 20 October 2026 — stream A: paired-test script, full FT vs LoRA (A8, secondary comparison, Robin)
+
+- **Code**: `src/comparison.py` — `load_aligned_predictions` (reads `results/predictions/<run_id>_<split>.parquet`
+  of both runs, refuses missing files and any difference in `idx` or `label`, length or order),
+  `paired_comparison` (macro-F1 and accuracy of A and B with `classification_metrics(num_labels=100)`, then
+  `paired_bootstrap_f1` and `mcnemar_test` from `src.metrics`, not re-implemented), `compare_runs` (row "all", plus
+  a "deduplicated" row without the idx of an `--exclude-idx` file; idx absent from the split are refused),
+  `update_results_csv` (replaces the earlier rows of the same pair, split and variant, keeps the others). CLI:
+  `scripts/paired_tests.py --pair <A> <B> [--pair ...] [--split test] [--exclude-idx <file>]`; it stops before
+  computing anything if a prediction file is missing.
+- **Protocol**: as pre-registered (1,000 resamples, seed 42, 95 % percentile interval; McNemar with continuity
+  correction, exact binomial if b + c < 25), test split, ΔF1 = F1(A) − F1(B).
+- **Run**: full FT `legal-bert_final_20261019-1523` vs LoRA r=8 `legal-bert_lora-r8_20261020-0940` →
+  **ΔF1 = +0.0214 [+0.0126; +0.0365], significant**; accuracy 0.8717 vs 0.8527, b = 377, c = 187, McNemar
+  p = 1.7e-15. The macro-F1 and accuracy recomputed from the prediction files equal the `test` blocks of both
+  `metrics.json`. Details in section 3.
+- **Main comparison not run**: BERT vs TF-IDF + LogReg (H1) and BERT vs LSTM need stream B's test predictions; no
+  TF-IDF or LSTM file is in `results/predictions/` (nor any run folder in `results/runs/`). H1 is not tested yet.
+  A8 stays open.
+- **Tests**: 3 new in `tests/test_comparison.py` (synthetic files): identical models → ΔF1 = 0, CI [0; 0], b = c = 0,
+  McNemar p = 1; shifted `idx`, changed labels and a missing file are refused; deduplicated row size, CSV rows
+  replaced and not duplicated, exclude idx outside the split refused. `python -m pytest -q` → 34 passed.
+
+### 20 October 2026 — stream A: LoRA r=8 run and trade-off table (A7, Robin)
+
+- **Colab fix**: `peft` raised `ImportError: Found an incompatible version of torchao (0.10.0, need > 0.16.0)`;
+  Colab preinstalls `torchao`, which the project never uses. Notebook 04, install cell: `!pip uninstall -y -q
+  torchao` (section 4; lesson in `tasks/lessons.md`).
+- **Run** `legal-bert_lora-r8_20261020-0940` (notebook 04, section 10, `--eval-test`, test evaluated once): run folder
+  committed, prediction files copied to `results/predictions/` (gitignored). Same recipe as the full run, only the
+  learning rate differs (5e-4); `lora_tradeoff_table.py` raised no recipe warning.
+- **Result** (`results/lora_tradeoff.csv`): 371,812 trainable parameters (0.34 % of full FT), adapter file 1.49 MB vs
+  438.3 MB, 2,021.5 s (−24.8 %), peak GPU memory 1,889.0 MB (−39.2 %); validation macro-F1 0.7552 (full 0.7930),
+  **test macro-F1 0.7691** (full 0.7905), test accuracy 0.8527 (full 0.8717). LoRA was **still improving at epoch 3**
+  (validation macro-F1 +0.0199 from epoch 2 to 3, best epoch = last). Table and comments in section 3.
+- **Deviation**: only r = 8 was run; the secondary comparison pre-registered in the README names r ∈ {4, 8, 16}.
+  r = 4 / 16 would be added with the same cell if GPU time allows. A7 ticked with this deviation stated.
 
 ### 19 October 2026 — stream A: per-class view of the human-review threshold (A9, Robin)
 
