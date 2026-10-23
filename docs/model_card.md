@@ -3,9 +3,10 @@
 > Skeleton created on 14/10/2026. The quantified sections are filled **only** from the results in `results/`
 > (stream C, task C9). Sentences marked *(provisional)* are to be confirmed or corrected by the audit.
 >
-> **Audit status:** audit code and notebook are prepared, but per-slice, counterfactual, OOD, and retrieval-stability
-> results are pending execution against the final model checkpoint and test prediction files. Empty result cells below
-> are intentionally not estimates.
+> **Audit status:** per-slice and bounded counterfactual results are pending execution against the final model checkpoint
+> and test prediction files. Notebook 05 compares two dense encoders, BM25, and a MiniLM+BM25 hybrid on a fixed
+> stratified 5% test sample. Draft lawyer queries are not evaluated because domain-expert relevance judgments are
+> unavailable. Empty result cells below are intentionally not estimates.
 
 ## 1. Description
 
@@ -13,7 +14,7 @@
 |---|---|
 | Components | (1) clause-type classifier, 100 LEDGAR classes; (2) similar-clause search engine |
 | Classification model | *to be completed (HF name, revision, full FT or LoRA)* |
-| Embedding model | `sentence-transformers/all-MiniLM-L6-v2` (planned default; retrieval evaluation pending) |
+| Embedding model | `sentence-transformers/all-MiniLM-L6-v2` (selected for the focused benchmark) |
 | Training data | LEDGAR / LexGLUE: 60,000 clauses from contracts filed with the SEC (EDGAR), 2016-2017 |
 | Language | English (legal, United States) |
 | Team | Robin, Amandine, Brian — Albert School, October 2026 |
@@ -42,7 +43,10 @@
 
 The audit notebook computes slice macro-F1 over the true classes represented in each slice. Training-frequency
 groups are defined by terciles of per-class train counts; clause-length groups use training word-count quartiles.
-Results remain pending until the prediction artifacts are available.
+Party-role groups rely on keyword heuristics, can overlap, and are not verified contract-type or party metadata.
+Automatic retrieval metrics use a reproducible sample of 5% of each test-label group (at least one query per
+represented label), not the full test set. The full training bank is retained. Results remain pending until the
+notebook is run.
 
 ## 5. Per-slice performance
 
@@ -59,10 +63,11 @@ Results remain pending until the prediction artifacts are available.
 
 ## 6. Robustness and bias
 
-Counterfactuals are generated from test clauses that contain the relevant text feature; one feature is changed per
-pair. These are heuristic stress tests, not legal redrafts. OOD examples are a small, manually authored synthetic
-probe set with no gold labels, so only predictions and confidence—not accuracy—will be reported. Results are pending
-execution of [`notebooks/06_bias_audit.ipynb`](../notebooks/06_bias_audit.ipynb).
+Counterfactuals are generated from a reproducible random sample of at most 1,000 test clauses that contain the
+relevant text feature; one feature is changed per pair. These are heuristic stress tests, not legal redrafts, and
+should be manually inspected. Their results are limited to this bounded sample and the specific transformations.
+Synthetic European/French OOD probes and retrieval-stability tests are not part of the focused final audit. Results
+are pending execution of [`notebooks/06_bias_audit.ipynb`](../notebooks/06_bias_audit.ipynb).
 
 | Perturbation | Prediction flip rate | Confidence change |
 |---|---:|---:|
@@ -71,37 +76,20 @@ execution of [`notebooks/06_bias_audit.ipynb`](../notebooks/06_bias_audit.ipynb)
 | Jurisdiction (New York → Luxembourg…) | | |
 | Currency (USD → EUR) | | |
 
-OOD examples are synthetic and unlabelled, so only predictions and confidence—not accuracy—will be reported.
-
-### Retrieval stability under perturbation
-
-This measures whether a query change alters the top-5 results; it is not a relevance or fairness metric. Results are
-pending.
-
-| Perturbation | Top-1 unchanged | Mean top-5 Jaccard |
-|---|---:|---:|
-| Party-role swap | | |
-| he ↔ she | | |
-| Jurisdiction | | |
-| USD → EUR | | |
-
 ## 7. Retrieval evaluation
 
-Automatic relevance is defined as matching the query clause's LEDGAR label. Manual-query results are reported only
-after candidate clauses have been reviewed and judged by a human.
+Automatic relevance is defined as matching the query clause's LEDGAR label. Metrics are computed on the fixed,
+stratified 5% sample of the test set and must not be presented as full-test estimates. Manual-query results are
+not reported: the drafted questions lack domain-expert relevance judgments. Therefore, the automatic benchmark
+does not establish that retrieved clauses satisfy detailed legal constraints such as notice periods or governing
+jurisdiction.
 
 | Method | P@5 | MRR@10 | nDCG@10 |
 |---|---:|---:|---:|
 | MiniLM | | | |
-| all-mpnet-base-v2 | | | |
-| bge-small-en-v1.5 | | | |
+| BGE-small | | | |
 | BM25 | | | |
 | MiniLM + BM25 (RRF) | | | |
-
-Manual lawyer-query metrics (judged query count: ___): P@5 ___; MRR@10 ___; nDCG@10 ___.
-
-Retrieval stability under counterfactual changes is summarized separately in Section 6 by top-1 stability and mean
-top-5 Jaccard; this is a consistency measure, not a relevance or fairness score.
 
 ## 8. Calibration and human review threshold
 

@@ -24,6 +24,12 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 **Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8,
 `scripts/paired_tests.py` ready); LSTM predictions (B6) for the third pair; retrieval benchmark execution (C).**
 
+**Stream C scope update (23/10):** notebook 05 compares two dense encoders, BM25, and MiniLM+BM25 RRF on a
+reproducible, label-stratified 5% sample of test queries, retaining the full training bank. Draft lawyer queries are
+not evaluated because domain-expert judgments are unavailable. Notebook 06 keeps
+classifier slice metrics and limits counterfactual inference to at most 1,000 sampled test clauses. Synthetic OOD
+probes and retrieval-stability audit claims remain out of scope.
+
 **Deadlines:**
 - code freeze: **Thursday 22 October 2026, 23:59** (internal margin);
 - GitHub delivery: **Friday 23 October 2026**;
@@ -77,13 +83,11 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 ### Retrieval and audit (Brian)
 - [x] C1 implementation: cached, normalized dense index with batched cosine search.
 - [x] C2 notebook: 10 qualitative m2 searches prepared (5 lawyer questions + 5 validation clauses).
-- [x] C3 draft: 28 lawyer questions, including numeric and jurisdiction constraints; relevance judgments are pending.
-- [x] C4/C5 implementation: same-label ranking metrics, three-encoder comparison workflow, BM25 and RRF hybrid.
-- [ ] Run retrieval notebooks, review the 10 m2 searches, judge C3 candidates, and generate `results/retrieval_summary.csv`.
-- [x] C6/C7 implementation prepared: train-defined frequency/length slices, role heuristics, generated counterfactuals,
-  and a clearly labelled synthetic OOD probe set.
-- [x] C8 notebook prepared for saved test predictions, final checkpoint inference, slice metrics, counterfactual and
-  retrieval stability outputs; C6-C8 results remain pending teammate artifacts and execution.
+- [x] C3 draft: 28 lawyer questions, including numeric and jurisdiction constraints; retained as illustrative future queries, not evaluated because domain-expert judgments are unavailable.
+- [x] C4/C5 implementation: same-label ranking metrics for MiniLM, BGE-small, BM25, and MiniLM+BM25 RRF on a fixed stratified 5% test-query sample.
+- [ ] Run retrieval notebook, review the 10 m2 searches, and generate `results/retrieval_summary.csv`; C3 lawyer-query evaluation is out of scope.
+- [x] C6/C7 implementation prepared: train-defined frequency/length slices, rule-detected party-role proxies, and generated counterfactuals.
+- [x] C8 notebook prepared for final-model slice metrics and counterfactual inference bounded to at most 1,000 sampled test clauses; results remain pending required artifacts and execution.
 - [x] C9 model card updated with audit methodology and limitations; measured audit fields remain pending.
 
 ### Delivery

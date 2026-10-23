@@ -10,5 +10,5 @@ Reusable logic lives in `src/`; notebooks tell the story and call `src/`.
 | 02 | `02_retrieval_index.ipynb` | Sentence-transformer index, queries checked by hand | Brian | m2 |
 | 03 | `03_lstm_classifier.ipynb` | LSTM / BiLSTM, error analysis | Amandine | m3 |
 | 04 | `04_transformer_finetuning.ipynb` | BERT-class fine-tuning, LoRA, paired tests, calibration | Robin | m4 |
-| 05 | `05_retrieval_eval.ipynb` | Retrieval evaluation, encoders, hybrid BM25 + dense | Brian | — |
-| 06 | `06_bias_audit.ipynb` | Per-slice audit, counterfactuals, out-of-distribution | Brian | audit |
+| 05 | `05_retrieval_eval.ipynb` | Two dense encoders, BM25 and MiniLM+BM25 RRF on a fixed stratified 5% test sample; no manual lawyer-query evaluation | Brian | — |
+| 06 | `06_bias_audit.ipynb` | Classifier slice metrics and counterfactual stress test bounded to 1,000 test clauses | Brian | audit |

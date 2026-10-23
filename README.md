@@ -47,7 +47,9 @@ The actual state of the project is in [`PROGRESS.md`](PROGRESS.md).
 | **m2** | **Sentence-transformer** retrieval index over the clauses (embed, normalise, top-k cosine) + queries checked by hand | `notebooks/02_retrieval_index.ipynb` | ⏳ |
 | **m3** | **LSTM** classifier (GloVe, packing) + error analysis (per-class F1, most confused classes) | `notebooks/03_lstm_classifier.ipynb` | ⏳ |
 | **m4** | **BERT-class fine-tuning** (full) + **LoRA** + trade-off table + **paired test** of the main comparison | `notebooks/04_transformer_finetuning.ipynb` | ⏳ |
-| audit | Retrieval evaluation, **bias / robustness audit** per slice, model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb` | ⏳ |
+| audit | Two dense encoders, BM25 and hybrid retrieval evaluation on a fixed stratified 5% test sample; focused classifier slice and counterfactual audit; model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb` | ⏳ |
+
+To keep the retrieval comparison runnable, notebook 05 evaluates two dense encoders, BM25 and a MiniLM+BM25 hybrid on a reproducible, stratified 5% sample of test clauses. These are sampled estimates, not full-test scores; indexing still uses the full training bank. Lawyer-query examples are retained as drafts but are not evaluated because no domain-expert relevance judgments are available. Notebook 06 reports classifier slices and counterfactual results from a bounded sample. It does not claim a broad audit of contract types, parties, languages, or retrieval robustness.
 
 ## Main comparison (pre-registered on 14 October 2026, before any experiment)
 
@@ -115,7 +117,8 @@ upgrade the `ipykernel` / `jupyter-client` versions pinned by `google-colab`), t
 - Global seed **42** (`src/utils.py::set_seed`), model and library versions pinned and reported.
 - Every run writes its configuration, metrics and predictions to `results/` (format described in
   [`CLAUDE.md`](CLAUDE.md)).
-- The test set is used **only once** per final model; every decision is made on the validation set.
+- The classification test set is used **only once** per final model; retrieval uses a fixed stratified 5% sample
+  solely for its final benchmark, not for model selection. Classifier decisions are made on the validation set.
 
 ## Project structure
 
@@ -135,10 +138,10 @@ upgrade the `ipykernel` / `jupyter-client` versions pinned by `google-colab`), t
 │   ├── utils.py           # Seed, saving runs
 │   ├── calibration.py     # Stream A: ECE, reliability diagram, human-review threshold
 │   ├── models/            # Streams A and B: TF-IDF, LSTM, HF fine-tuning, LoRA
-│   ├── retrieval/         # Stream C: sentence-transformer index, BM25, hybrid
+│   ├── retrieval/         # Stream C: sentence-transformer index and retrieval evaluation
 │   └── audit/             # Stream C: slices, counterfactual perturbations
 ├── scripts/               # Command-line entry points (training, evaluation)
-├── eval/                  # Hand-built sets: lawyer questions, counterfactuals, out-of-distribution
+├── eval/                  # Hand-built lawyer questions and counterfactuals
 ├── tests/                 # Unit tests (pytest), e.g. metrics checked against the course exercises
 ├── results/               # Versioned metrics (JSON/CSV) and figures; predictions gitignored
 ├── docs/

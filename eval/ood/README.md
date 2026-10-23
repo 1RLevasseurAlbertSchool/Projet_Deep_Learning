@@ -6,4 +6,5 @@ illustrative paraphrases, not a validated translation set. They have no gold
 LEDGAR labels, so use the model's predictions and confidence only; do not report
 accuracy or generalize their results to all European or French contracts.
 
-Notebook 06 writes their output to `results/audit/ood_predictions.csv`.
+These probes are retained as exploratory data but are not run or reported by the
+focused final audit notebook.

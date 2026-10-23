@@ -9,9 +9,9 @@
 |---|---|---|
 | Fine-tune a pretrained language model (BERT / CamemBERT) on clause classification | BERT-class encoder fine-tuned on LEDGAR (full + LoRA). LEDGAR is **in English**: CamemBERT (French) is not relevant here; we justify this in the presentation | A |
 | Full pipeline: tokenisation, training loop, evaluation on a held-out set | The model's own tokenizer, the HF `Trainer` **and** a hand-written PyTorch loop for the LSTM; single evaluation on the 2019 test set | A, B |
-| Sentence-transformer retrieval index | Normalised index (cosine), comparison of 2-3 encoders, hybrid BM25 + dense for exact constraints ("30-day") | C |
-| Bias audit | Per-slice performance (class, frequency, length, party / contract type, year) + counterfactual tests + out-of-distribution | C |
-| Evidence "overall, per clause type, across contracts and parties" | Overall macro-F1, per-class F1, per-slice tables, paired tests | A, B, C |
+| Sentence-transformer retrieval index | Normalised MiniLM index (cosine) and sampled held-out same-label evaluation; lawyer-query relevance not evaluated | C |
+| Bias audit | Classifier performance by training frequency and clause length, with party-role proxies and a bounded counterfactual stress test | C |
+| Evidence "overall, per clause type, across contracts and parties" | Overall macro-F1, per-class F1, available slice tables, and explicit limitations where reliable group metadata is absent | A, B, C |
 | "What it must not be used for" | Model card with intended / prohibited uses, backed by the audit numbers | C (+ all) |
 | Reproducible results | Seed, configs, versions, `results/runs/*`, repo that runs on a fresh clone | All |
 
@@ -68,28 +68,21 @@ same metrics, same prediction format). Dependencies between streams are limited 
    repeated on stream A's final model.
 6. **Unified comparison table** of all models (`results/summary_classification.csv`) + figures.
 
-### Stream C — Brian: Retrieval, audit and model card
+### Stream C — Brian: Retrieval, focused audit and model card
 
 *The two other building blocks of the product: search and trust.*
 
 1. **`m2` index**: `all-MiniLM-L6-v2` (course reference) over the bank = train; top-k cosine search;
    10 queries checked by hand.
-2. **Retrieval evaluation**:
-   - automatic: test clauses as queries, relevant = same label → P@k, MRR, nDCG@10;
-   - manual: **set of 25-30 lawyer questions** (including numeric constraints: "30-day notice",
-     "governed by the laws of New York") with relevance judgments;
-   - comparison of 2-3 encoders (`all-MiniLM-L6-v2`, `all-mpnet-base-v2`, `BAAI/bge-small-en-v1.5`);
-   - **hybrid BM25 + dense (RRF)** and optional filter by the type predicted by the classifier.
-3. **Bias / robustness audit** (framework ready on the TF-IDF predictions, re-run on the final model):
-   - **per slice**: class frequency (head / middle / tail), length, year, **party type**
-     (Borrower/Lender, Employee/Employer, Landlord/Tenant, Buyer/Seller… detected by rules) as a proxy for
-     **contract type**;
-   - **counterfactual**: swapping party roles, he/she pronouns in employment contracts, jurisdiction
-     (New York → Delaware / England / Luxembourg), currency (USD → EUR) → prediction flip rate and confidence drop;
-   - **out-of-distribution**: small set of European-style clauses and French clauses → show the failure /
-     confidence drop;
-   - same audit on **retrieval** (do the results change with jurisdiction or gender?).
-4. **Model card** (`docs/model_card.md`): intended use, prohibited uses, per-slice performance, limitations.
+2. **Focused retrieval evaluation**:
+   - automatic: one fixed, reproducible **stratified 5% sample** of test clauses, relevant = same LEDGAR label → P@5, MRR@10, nDCG@10;
+   - do not report lawyer-query metrics without domain-expert relevance judgments; retain drafted questions as future evaluation material;
+   - do not interpret same-label relevance as a legal judgment or the sample as a full-test score.
+3. **Focused classifier audit**:
+   - per-slice: training-frequency group and clause length; rule-detected party roles are labelled as proxies, not contract metadata;
+   - counterfactual stress test on at most **1,000 sampled test clauses**, changing one supported text feature at a time; inspect examples before interpretation;
+   - do not claim year comparisons (the test split is 2019 only), representative European/French performance, or retrieval robustness.
+4. **Model card** (`docs/model_card.md`): intended / prohibited uses, measured results, sample sizes and limitations.
 
 ### Shared work
 
@@ -105,10 +98,10 @@ same metrics, same prediction format). Dependencies between streams are limited 
 | **Wed 14/10** | Repo initialised, docs, plan (done) | Clone + env | Clone + env |
 | **Thu 15/10** | HF script + DistilBERT smoke test (2k ex.) | `src/data.py` validated, EDA | MiniLM index v0 + 10 queries |
 | **Fri 16/10** | Full DistilBERT (val) | TF-IDF + LogReg → **tag m1** | Queries checked → **tag m2**; lawyer question set |
-| **Sat 17/10** | Screening legal-bert / deberta (val) | LSTM + GloVe | Automatic retrieval eval + 2-3 encoders |
-| **Sun 18/10** | Final full FT run (test once) | Error analysis → **tag m3** | Hybrid BM25 + dense; audit framework on TF-IDF |
-| **Mon 19/10** | LoRA r=4/8/16 + paired tests → **tag m4** | Unified comparison table | Counterfactual + out-of-distribution sets |
-| **Tue 20/10** | Calibration + review threshold | Error analysis of the final model | Audit on the final model |
+| **Sat 17/10** | Screening legal-bert / deberta (val) | LSTM + GloVe | Prepare fixed-sample MiniLM evaluation |
+| **Sun 18/10** | Final full FT run (test once) | Error analysis → **tag m3** | Implement focused retrieval and classifier audit |
+| **Mon 19/10** | LoRA r=4/8/16 + paired tests → **tag m4** | Unified comparison table | Build small counterfactual test set |
+| **Tue 20/10** | Calibration + review threshold | Error analysis of the final model | Run bounded classifier audit |
 | **Wed 21/10** | README results | Final figures | Model card |
 | **Thu 22/10** | **Code freeze**, test on a fresh clone, tag `v1.0` | Slides | Slides |
 | **Fri 23/10** | **Delivery** + rehearsal | | |

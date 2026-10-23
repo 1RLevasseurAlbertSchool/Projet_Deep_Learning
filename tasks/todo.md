@@ -49,13 +49,13 @@
 |---|---|---|---|---|
 | C1 | `all-MiniLM-L6-v2` index over the bank (train), normalised and cached embeddings, `search(query, k)` | `src/retrieval/dense.py` | Thu 15/10 | B1 |
 | C2 | 10 queries (pasted clauses + questions) checked by hand → **tag m2** | `notebooks/02_retrieval_index.ipynb` | Fri 16/10 | C1 |
-| C3 | Set of 25-30 lawyer questions with relevance judgments (including numeric / jurisdiction constraints) | `eval/retrieval_queries.jsonl` | Fri 16/10 | — |
-| C4 | Automatic evaluation (test → bank, relevant = same label): P@5, MRR, nDCG@10; MiniLM / mpnet / bge-small comparison | `results/retrieval_summary.csv` | Sat 17/10 | C1 |
-| C5 | BM25 + hybrid RRF; optional filter by predicted type; evaluation on C3 and C4 | `src/retrieval/hybrid.py` | Sun 18/10 | C3, C4 |
-| C6 | Audit framework: slices (head/middle/tail frequency, length, year, party type detected by rules) on the TF-IDF predictions | `src/audit/slices.py`, `notebooks/06_bias_audit.ipynb` | Sun 18/10 | B5 |
-| C7 | Counterfactual sets (party roles, he/she, jurisdiction, currency) and out-of-distribution sets (European style, French) | `eval/counterfactuals/`, `src/audit/perturb.py` | Mon 19/10 | — |
-| C8 | Full audit on the final model: prediction flip rate, confidence drop, per-slice F1; same test on retrieval | tables + figures | Tue 20/10 | A6, C6, C7 |
-| C9 | Model card: intended / prohibited uses, per-slice performance, limitations, recommendations | `docs/model_card.md` | Wed 21/10 | C8, A9 |
+| C3 | Draft 28 lawyer questions; retain as illustrative future queries (no expert judgments, not evaluated) | `eval/retrieval_queries.jsonl` | Fri 16/10 | C1 |
+| C4 | Compare MiniLM and BGE-small on a stratified 5% test-query sample, using same-label relevance and P@5 / MRR@10 / nDCG@10 | `results/retrieval_summary.csv` | Sat 17/10 | C1 |
+| C5 | Evaluate BM25 and MiniLM+BM25 RRF on the same sampled test queries | `src/retrieval/hybrid.py`, `notebooks/05_retrieval_eval.ipynb` | Sun 18/10 | C1 |
+| C6 | Classifier slice metrics: training-frequency groups, clause length, and explicitly labelled rule-detected party-role proxies | `src/audit/slices.py`, `notebooks/06_bias_audit.ipynb` | Sun 18/10 | A6 |
+| C7 | One-feature counterfactual stress tests; bounded to at most 1,000 reproducibly sampled test clauses | `eval/counterfactuals/`, `src/audit/perturb.py` | Mon 19/10 | — |
+| C8 | Focused audit on final classifier: per-slice F1 and counterfactual prediction/confidence changes; no retrieval or synthetic OOD audit claims | `results/audit/`, `notebooks/06_bias_audit.ipynb` | Tue 20/10 | A6, C6, C7 |
+| C9 | Model card: intended / prohibited uses, measured results, sample sizes, and limitations | `docs/model_card.md` | Wed 21/10 | C8, A9 |
 
 ## Shared
 

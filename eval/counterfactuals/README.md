@@ -10,5 +10,7 @@ jurisdiction, or USD currency notation. The transformations are heuristic
 stress tests, not legal redrafting; review generated text before interpreting
 the flip rates.
 
-The output pair table is written to `results/audit/counterfactual_pairs.csv`
-when notebook 06 is run.
+Notebook 06 generates pairs from a reproducible sample of at most 1,000 test
+clauses to bound inference time. The output pair table is written to
+`results/audit/counterfactual_pairs.csv`. Results describe only that sample
+and the supported heuristic edits.
