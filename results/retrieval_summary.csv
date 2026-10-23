@@ -1,0 +1,5 @@
+method,query_set,n_queries,precision@5,mrr@10,ndcg@10,search_time_s,index_cache_hit
+sentence-transformers/all-MiniLM-L6-v2,Stratified 5% LEDGAR test; relevance=same label,499,0.7639278557114229,0.8512206953589718,0.7420739504768854,14.57,True
+BAAI/bge-small-en-v1.5,Stratified 5% LEDGAR test; relevance=same label,499,0.7875751503006012,0.8752210770747845,0.7723481377177048,15.06,True
+BM25,Stratified 5% LEDGAR test; relevance=same label,499,0.7799599198396794,0.868339059070522,0.7553486404888035,624.41,
+"MiniLM + BM25 (RRF, c=60)",Stratified 5% LEDGAR test; relevance=same label,499,0.7843687374749498,0.868460730985781,0.7664850435171865,645.95,
