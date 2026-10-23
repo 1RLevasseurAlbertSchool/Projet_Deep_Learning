@@ -1,0 +1,24 @@
+{
+  "model_name": "TF-IDF + Logistic Regression",
+  "variant": "baseline",
+  "ngram_range": [
+    1,
+    2
+  ],
+  "min_df": 2,
+  "sublinear_tf": true,
+  "C": 1.0,
+  "max_iter": 1000,
+  "n_features": 173477,
+  "eval_test": true,
+  "run_id": "tfidf-logreg_baseline_20261023",
+  "seed": 42,
+  "versions": {
+    "python": "3.11.6",
+    "torch": "2.14.1",
+    "transformers": "5.19.0",
+    "sentence_transformers": "6.1.0",
+    "sklearn": "1.9.1",
+    "datasets": "5.1.0"
+  }
+}

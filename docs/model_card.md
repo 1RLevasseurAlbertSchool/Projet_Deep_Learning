@@ -1,20 +1,18 @@
 # Model card — Clause Review Assistant (NLP core)
 
-> Skeleton created on 14/10/2026. The quantified sections are filled **only** from the results in `results/`
-> (stream C, task C9). Sentences marked *(provisional)* are to be confirmed or corrected by the audit.
+> Quantified classification and retrieval results below come from the recorded runs and `results/` artifacts.
 >
-> **Audit status:** per-slice and bounded counterfactual results are pending execution against the final model checkpoint
-> and test prediction files. Notebook 05 compares two dense encoders, BM25, and a MiniLM+BM25 hybrid on a fixed
-> stratified 5% test sample. Draft lawyer queries are not evaluated because domain-expert relevance judgments are
-> unavailable. Empty result cells below are intentionally not estimates.
+> **Audit status:** per-slice and bounded counterfactual results are pending completion of notebook 06 against the final
+> model checkpoint and test predictions. Retrieval results are available from notebook 05 on a fixed stratified 5%
+> test sample. Draft lawyer queries are not evaluated because domain-expert relevance judgments are unavailable.
 
 ## 1. Description
 
 | | |
 |---|---|
 | Components | (1) clause-type classifier, 100 LEDGAR classes; (2) similar-clause search engine |
-| Classification model | *to be completed (HF name, revision, full FT or LoRA)* |
-| Embedding model | `sentence-transformers/all-MiniLM-L6-v2` (selected for the focused benchmark) |
+| Classification model | `nlpaueb/legal-bert-base-uncased`, full fine-tuning; Hugging Face revision `15b570cbf88259610b082a167dacc190124f60f6` |
+| Embedding models evaluated | `sentence-transformers/all-MiniLM-L6-v2`, `BAAI/bge-small-en-v1.5`, BM25, and MiniLM + BM25 reciprocal-rank fusion |
 | Training data | LEDGAR / LexGLUE: 60,000 clauses from contracts filed with the SEC (EDGAR), 2016-2017 |
 | Language | English (legal, United States) |
 | Team | Robin, Amandine, Brian — Albert School, October 2026 |
@@ -35,18 +33,28 @@
 
 ## 4. Overall performance
 
-| Metric (2019 test set) | Value | 95 % CI |
+| Model / metric (2019 test set) | Value | 95 % CI |
 |---|---:|---:|
-| Macro-F1 | | |
-| Accuracy (micro-F1) | | |
-| Macro-F1, de-duplicated test set | | |
+| Legal-BERT full fine-tuning — macro-F1 | 0.7905 | Not estimated |
+| Legal-BERT full fine-tuning — accuracy (micro-F1) | 0.8717 | Not estimated |
+| TF-IDF + logistic regression — macro-F1 | 0.7625 | Not estimated |
+| TF-IDF + logistic regression — accuracy | 0.8486 | Not estimated |
+| Legal-BERT, de-duplicated test macro-F1 | Not computed | — |
+
+The Legal-BERT result is from the final run `legal-bert_final_20261019-1523`; the TF-IDF result is from
+`notebooks/01_eda_baseline.ipynb`. Both prediction files cover the same 10,000 test clauses in the same order.
+The paired comparison finds Legal-BERT ahead of TF-IDF by 0.0281 macro-F1 (95 % paired-bootstrap CI
+[0.0180, 0.0390], 1,000 resamples, seed 42; McNemar p = 1.71 × 10⁻¹⁶). This supports a statistically significant
+advantage on this test split under the pre-specified analyses. For full fine-tuning vs. LoRA, Δ macro-F1 = 0.0214
+(95 % paired-bootstrap CI [0.0126, 0.0365], 1,000 resamples, seed 42). The classifier test set is the 2019
+chronological split.
 
 The audit notebook computes slice macro-F1 over the true classes represented in each slice. Training-frequency
 groups are defined by terciles of per-class train counts; clause-length groups use training word-count quartiles.
 Party-role groups rely on keyword heuristics, can overlap, and are not verified contract-type or party metadata.
 Automatic retrieval metrics use a reproducible sample of 5% of each test-label group (at least one query per
-represented label), not the full test set. The full training bank is retained. Results remain pending until the
-notebook is run.
+represented label), not the full test set. The full training bank is retained. Classifier audit results remain
+pending until notebook 06 finishes.
 
 ## 5. Per-slice performance
 
@@ -86,10 +94,14 @@ jurisdiction.
 
 | Method | P@5 | MRR@10 | nDCG@10 |
 |---|---:|---:|---:|
-| MiniLM | | | |
-| BGE-small | | | |
-| BM25 | | | |
-| MiniLM + BM25 (RRF) | | | |
+| MiniLM | 0.7639 | 0.8512 | 0.7421 |
+| BGE-small | **0.7876** | **0.8752** | **0.7723** |
+| BM25 | 0.7800 | 0.8683 | 0.7553 |
+| MiniLM + BM25 (RRF, c=60) | 0.7844 | 0.8685 | 0.7665 |
+
+The benchmark contains 499 sampled test clauses. Same-label relevance measures retrieval of clauses with the same
+broad LEDGAR class; it does not establish that a result satisfies specific legal constraints or answers a lawyer's
+question. No expert-judged lawyer-query metrics are available.
 
 ## 8. Calibration and human review threshold
 

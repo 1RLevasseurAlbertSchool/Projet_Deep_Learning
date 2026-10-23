@@ -19,7 +19,7 @@ Final project of the course **Deep Learning for Sequential Data and NLP** (MSA-D
 | Member | Work stream | Course milestones |
 |---|---|---|
 | **Robin** | A — Transformers: BERT-class fine-tuning, LoRA, paired tests, calibration | m4 |
-| **Amandine** | B — Data, baselines & RNN: LEDGAR loading, EDA, TF-IDF, LSTM, error analysis | m1, m3 |
+| **Amandine** | B — Data, baseline & EDA: LEDGAR loading, TF-IDF, error analysis | m1 |
 | **Brian** | C — Retrieval & audit: sentence-transformer index, retrieval evaluation, bias audit, model card | m2, audit |
 
 The detailed plan, task split and schedule are in [`STRATEGY.md`](STRATEGY.md) and [`tasks/todo.md`](tasks/todo.md).
@@ -43,13 +43,14 @@ The actual state of the project is in [`PROGRESS.md`](PROGRESS.md).
 
 | Milestone | Content | Notebook / script | Status |
 |---|---|---|---|
-| **m1** | LEDGAR loading, class distribution, **TF-IDF + logistic regression** baseline, macro-F1 | `notebooks/01_eda_baseline.ipynb` | ⏳ |
+| **m1** | LEDGAR loading, class distribution, **TF-IDF + logistic regression** baseline, macro-F1 | `notebooks/01_eda_baseline.ipynb` | Results available |
 | **m2** | **Sentence-transformer** retrieval index over the clauses (embed, normalise, top-k cosine) + queries checked by hand | `notebooks/02_retrieval_index.ipynb` | ⏳ |
-| **m3** | **LSTM** classifier (GloVe, packing) + error analysis (per-class F1, most confused classes) | `notebooks/03_lstm_classifier.ipynb` | ⏳ |
-| **m4** | **BERT-class fine-tuning** (full) + **LoRA** + trade-off table + **paired test** of the main comparison | `notebooks/04_transformer_finetuning.ipynb` | ⏳ |
-| audit | Two dense encoders, BM25 and hybrid retrieval evaluation on a fixed stratified 5% test sample; focused classifier slice and counterfactual audit; model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb` | ⏳ |
+| **m4** | **BERT-class fine-tuning** (full) + **LoRA** + trade-off table + paired tests | `notebooks/04_transformer_finetuning.ipynb` | Results available |
+| audit | Two dense encoders, BM25 and hybrid retrieval evaluation on a fixed stratified 5% test sample; focused classifier slice and counterfactual audit; model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb` | Retrieval results available; classifier audit running |
 
 To keep the retrieval comparison runnable, notebook 05 evaluates two dense encoders, BM25 and a MiniLM+BM25 hybrid on a reproducible, stratified 5% sample of test clauses. These are sampled estimates, not full-test scores; indexing still uses the full training bank. Lawyer-query examples are retained as drafts but are not evaluated because no domain-expert relevance judgments are available. Notebook 06 reports classifier slices and counterfactual results from a bounded sample. It does not claim a broad audit of contract types, parties, languages, or retrieval robustness.
+
+**Scope note:** the planned LSTM comparison is excluded from this delivery. The classification comparison therefore covers the TF-IDF baseline, full Legal-BERT fine-tuning, and Legal-BERT LoRA.
 
 ## Main comparison (pre-registered on 14 October 2026, before any experiment)
 
@@ -77,14 +78,20 @@ first results; any deviation from the protocol will be stated explicitly in [`PR
 
 | Model | Trained parameters | Val macro-F1 | Test macro-F1 | Test accuracy | Training time |
 |---|---:|---:|---:|---:|---:|
-| TF-IDF + LogReg | — | | | | |
-| LSTM (GloVe) | | | | | |
-| BERT-class (full FT) | | | | | |
-| BERT-class + LoRA | | | | | |
+| TF-IDF + LogReg | — | — | 0.7625 | 0.8486 | Not recorded |
+| Legal-BERT (full fine-tuning) | 109,559,140 | 0.7930 | 0.7905 | 0.8717 | 2,688 s |
+| Legal-BERT (LoRA, r=8) | 371,812 (0.34% of full) | 0.7552 | 0.7691 | 0.8527 | 2,021 s |
 
-| Retrieval | P@5 (same type) | MRR@10 | nDCG@10 | Manual queries judged |
-|---|---:|---:|---:|---:|
-| `all-MiniLM-L6-v2` | | | |
+The classifier test set is the chronological 2019 split. On the same 10,000 test clauses, Legal-BERT exceeds TF-IDF by **+0.0281 macro-F1** (95% paired-bootstrap CI **[0.0180, 0.0390]**, 1,000 resamples, seed 42; McNemar p = **1.71 × 10⁻¹⁶**), supporting a significant improvement under both pre-specified comparisons. The full fine-tuning vs. LoRA comparison gives Δ macro-F1 = +0.0214 (95% paired-bootstrap CI [0.0126, 0.0365], 1,000 resamples; McNemar p = 1.74 × 10⁻¹⁵). Only LoRA r=8 was run.
+
+Retrieval relevance is defined as matching the query clause's LEDGAR label. These values are from the fixed stratified 5% test-query sample (499 queries), not a full-test estimate or legal relevance judgment.
+
+| Retrieval method | P@5 (same label) | MRR@10 | nDCG@10 |
+|---|---:|---:|---:|
+| `all-MiniLM-L6-v2` | 0.7639 | 0.8512 | 0.7421 |
+| `BAAI/bge-small-en-v1.5` | **0.7876** | **0.8752** | **0.7723** |
+| BM25 | 0.7800 | 0.8683 | 0.7553 |
+| MiniLM + BM25 (RRF, c=60) | 0.7844 | 0.8685 | 0.7665 |
 
 ## What the system must not do
 
@@ -92,7 +99,7 @@ Provisional summary — the argued, quantified version will be in [`docs/model_c
 
 - give legal advice or judge the validity / enforceability of a clause;
 - classify **non-English** clauses (models trained on US legal English);
-- classify clause types **outside the 100 LEDGAR classes** without an uncertainty signal;
+- treat a predicted class as reliable for clause types **outside the 100 LEDGAR classes**;
 - replace a lawyer's review: it **prioritises** and **suggests**, it does not decide.
 
 ## Installation
