@@ -1,0 +1,10 @@
+category,n_pairs,flip_rate,mean_confidence_delta
+currency_usd_to_eur,21,0.0,5.392517362322126e-05
+jurisdiction_new_york_to_delaware,44,0.0,-0.001087838275866075
+jurisdiction_new_york_to_england,44,0.0,-0.005081363022327423
+jurisdiction_new_york_to_luxembourg,44,0.0,-0.005997954444451766
+pronoun_he_she,17,0.0,0.00032506269567153035
+role_swap_borrower_lender,42,0.023809523809523808,0.0010309595437276932
+role_swap_buyer_seller,7,0.0,-0.0003166454178946359
+role_swap_employer_employee,6,0.0,-0.003945052623748779
+role_swap_landlord_tenant,11,0.0,-0.001162122596393932
