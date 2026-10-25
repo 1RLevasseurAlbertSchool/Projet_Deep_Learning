@@ -25,7 +25,7 @@
 | [x] A5 | Screening `nlpaueb/legal-bert-base-uncased` and/or `microsoft/deberta-v3-base` (validation) | screening table | Sat 17/10 | A4 |
 | [x] A6 | Choice of the final model **on validation**, final run, **single test evaluation** | `results/runs/<final>/`, test predictions | Sun 18/10 | A5 |
 | [x] A7 | LoRA (r = 4, 8, 16; α = 2r; query/value) on the same encoder — **deviation: r = 8 only** (`legal-bert_lora-r8_20261020-0940`, 20/10); r = 4 / 16 not run unless GPU time allows | trade-off table (params, time, memory, adapter size, macro-F1): `results/lora_tradeoff.csv` | Mon 19/10 | A6 |
-| [ ] A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM — script and full vs LoRA r=8 done (20/10); main and LSTM pairs wait for stream B's test predictions | `scripts/paired_tests.py`, `results/paired_tests.csv` → **tag m4** | Mon 19/10 | A6, A7, B4, B5, B6 |
+| [x] A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM — script and full vs LoRA r=8 done (20/10); main pair done by stream C (25/10, ΔF1 = +0.0281, **caveat: TF-IDF baseline not tuned on validation**); LSTM pair dropped (no LSTM) | `scripts/paired_tests.py`, `results/paired_tests.csv` → **tag m4** | Mon 19/10 | A6, A7, B4, B5, B6 |
 | [x] A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision); per-class precision at the recommended threshold (test, head / middle / tail by training-frequency terciles) | figure + table; `results/calibration_per_class_<run_id>.csv` + `precision_per_class_at_threshold.png` | Tue 20/10 | A6 |
 | [ ] A10 | README results section, PR reviews, tag `v1.0`, test on a fresh clone | final README | Thu 22/10 | all |
 
@@ -37,9 +37,9 @@
 | B2 | EDA: class distribution (log scale), split by year, examples per class | `notebooks/01_eda_baseline.ipynb` | Thu 15/10 | B1 |
 | B3 | Lengths in words and WordPiece tokens (p50, p95, p99) → sent to A for `max_length` | figure + numbers in `PROGRESS.md` | Thu 15/10 | B1 |
 | B4 | Train/test near-duplicates (exact normalised text + TF-IDF similarity > 0.95): share of the test set affected | number + list of de-duplicated `idx` | Fri 16/10 | B1 |
-| B5 | **TF-IDF + LogReg** baseline (1-2 n-grams, C tuned on validation), val/test macro-F1, predictions in the common format → **tag m1** | run + predictions | Fri 16/10 | B1 |
-| B6 | **LSTM / BiLSTM**: train vocabulary (`min_freq`), `<pad>`=0 `<unk>`=1, packing, GloVe, PyTorch loop, clipping, early stopping on validation | `src/models/lstm.py`, `notebooks/03_lstm_classifier.ipynb` | Sat 17/10 | B1 |
-| B7 | Error analysis: per-class F1 vs support, top 10 confused pairs, 20 errors read and commented → **tag m3** | section of notebook 03 | Sun 18/10 | B5, B6 |
+| [x] B5 | **TF-IDF + LogReg** baseline (1-2 n-grams, C tuned on validation), val/test macro-F1, predictions in the common format → **tag m1** — **deviation: C = 1.0 fixed, not tuned** (grid not run, ≈ 187 s and 5.4 GB RAM per C value); `tfidf-logreg_baseline_20261023`, val 0.7666 / test 0.7625 macro-F1 | run + predictions | Fri 16/10 | B1 |
+| ~~B6~~ | **Dropped (team decision, 25/10).** **LSTM / BiLSTM**: train vocabulary (`min_freq`), `<pad>`=0 `<unk>`=1, packing, GloVe, PyTorch loop, clipping, early stopping on validation | `src/models/lstm.py`, `notebooks/03_lstm_classifier.ipynb` | Sat 17/10 | B1 |
+| ~~B7~~ | **Dropped with the LSTM (team decision, 25/10).** Error analysis: per-class F1 vs support, top 10 confused pairs, 20 errors read and commented → **tag m3** | section of notebook 03 | Sun 18/10 | B5, B6 |
 | B8 | Unified comparison table of all models + figures (macro-F1, per-class F1) | `results/summary_classification.csv` | Mon 19/10 | A6, A7 |
 | B9 | Error analysis of the final model (stream A): which classes does BERT fix compared with TF-IDF? | figure + comment | Tue 20/10 | A6 |
 

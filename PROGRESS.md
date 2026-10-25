@@ -21,8 +21,11 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 0.9489**. Per class at that threshold: 11 classes below 0.90 precision (9 with ≥ 20 automatic labels), not mostly tail
 (4 tail, 5 middle, 2 head); rare classes pay in coverage and hidden errors instead (tail clauses 63.2 % automatic vs
 88.4 % head, and 14.2 % of the automatic ones wrong vs 2.6 %).
-**Next main step: TF-IDF + LogReg predictions (B5) for the pre-registered main comparison (A8,
-`scripts/paired_tests.py` ready); LSTM predictions (B6) for the third pair; retrieval benchmark execution (C).**
+Main comparison (A8, run by stream C): Legal-BERT vs TF-IDF + LogReg (`tfidf-logreg_baseline_20261023`, test
+macro-F1 0.7625) → **ΔF1 = +0.0281 [+0.0180; +0.0390]**, McNemar p = 1.7e-16: **H1 supported, with a caveat** —
+the baseline uses a fixed C = 1.0 and was not tuned on validation as pre-registered (validation macro-F1 0.7666), so
+the gap may be slightly overstated (see the 25/10 log entry). LSTM (B6, B7) **dropped by team decision on 25/10**:
+no third pair.
 
 **Stream C scope update (23/10):** notebook 05 compares two dense encoders, BM25, and MiniLM+BM25 RRF on a
 reproducible, label-stratified 5% sample of test queries, retaining the full training bank. Draft lawyer queries are
@@ -51,7 +54,7 @@ probes and retrieval-stability audit claims remain out of scope.
 - [ ] `load_ledgar()` validated on the real data.
 - [ ] Class distribution, years, lengths (words / tokens).
 - [ ] Train/test near-duplicates measured.
-- [ ] TF-IDF + LogReg: validation and test macro-F1.
+- [x] TF-IDF + LogReg: validation 0.7666 / test 0.7625 macro-F1 (C = 1.0 fixed, not tuned — stated deviation).
 - [ ] Tag `m1`.
 
 ### m2 — Retrieval index (Brian)
@@ -61,7 +64,7 @@ probes and retrieval-stability audit claims remain out of scope.
 - [ ] Tag `m2`.
 
 ### m3 — LSTM and error analysis (Amandine)
-- [ ] LSTM / BiLSTM with packing and GloVe.
+- [ ] ~~LSTM / BiLSTM with packing and GloVe.~~ Dropped by team decision (25/10).
 - [ ] Per-class F1, most confused classes.
 - [ ] Tag `m3`.
 
@@ -76,8 +79,8 @@ probes and retrieval-stability audit claims remain out of scope.
 - [x] Calibration (ECE, reliability diagram) + human-review threshold of the final model (A9, 19/10), with the
   per-class precision at the recommended threshold (head / middle / tail).
 - [x] LoRA run + trade-off table (A7, 20/10) — r = 8 only, r = 4 / 16 not run (stated deviation).
-- [ ] Paired tests (main comparison + secondary ones): script done, full FT vs LoRA r=8 done (20/10); BERT vs TF-IDF
-  (main) and BERT vs LSTM wait for stream B's prediction files.
+- [x] Paired tests: full FT vs LoRA r=8 (20/10); BERT vs TF-IDF (main, by stream C) — ΔF1 = +0.0281, baseline not
+  tuned on validation (stated deviation, 25/10). BERT vs LSTM dropped (no LSTM, team decision 25/10).
 - [ ] Tag `m4`.
 
 ### Retrieval and audit (Brian)
@@ -368,11 +371,8 @@ before the first push.
 
 1. Robin: add Amandine and Brian as collaborators on GitHub (if not done yet).
 2. Everyone: work on `main`, `git pull` before starting (see `CLAUDE.md`, Git section).
-3. Amandine: B5 (TF-IDF + LogReg, predictions in the common format) — it unblocks the pre-registered main
-   comparison A8 (Model A = `legal-bert_final_20261019-1523`). Then Robin runs
-   `python scripts/paired_tests.py --pair legal-bert_final_20261019-1523 <tfidf_run_id>` (and the same with the LSTM
-   run of B6), adding `--exclude-idx <file>` once the near-duplicate test idx of B4 exist. Needed in
-   `results/predictions/`: `<tfidf_run_id>_test.parquet` and `<lstm_run_id>_test.parquet` (gitignored: copy them).
+3. Done 25/10: B5 (TF-IDF + LogReg) delivered and the main comparison A8 run by stream C (baseline not tuned on
+   validation: see the 25/10 log entry). BERT vs LSTM dropped with the LSTM.
 4. Robin: copy `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` and
    `legal-bert_lora-r8_20261020-0940_{validation,test}.parquet` from the Drive clone (gitignored, absent from local
    checkouts) to the machines running A8 and C8 (done on Robin's laptop).
@@ -392,6 +392,22 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — deviation from protocol: TF-IDF baseline not tuned on validation (A8, B5, Robin)
+
+- **Facts**: the baseline used in the main comparison, `tfidf-logreg_baseline_20261023` (notebook 01), uses a fixed
+  C = 1.0 (1-2 n-grams, `min_df` 2, sublinear TF). The pre-registered README block says C and n-grams are tuned on
+  validation. A tuning grid was considered on 25/10 and **not run**: one fit takes about 187 s and 5.4 GB of RAM per
+  C value. A reproduction of the same configuration measured **validation macro-F1 = 0.7666** (C = 1); test
+  macro-F1 0.7625, accuracy 0.8486 (run `metrics.json`).
+- **Main comparison (A8, run by stream C)**: Legal-BERT (`legal-bert_final_20261019-1523`) vs TF-IDF →
+  ΔF1 = +0.0281 (95 % paired-bootstrap CI [0.0180, 0.0390], 1,000 resamples, seed 42), McNemar p = 1.71e-16
+  (`results/paired_tests.csv`). **H1 supported, with a caveat**: an untuned baseline may make the gap slightly
+  overstated.
+- **Docs**: deviation note under the main-comparison result in the README (the pre-registered block is unchanged),
+  TF-IDF validation macro-F1 added to the results table, one-line caveat in `docs/model_card.md` section 4.
+- **LSTM (B6, B7)**: dropped by team decision on 25/10; the BERT vs LSTM pair will not be run.
+- **Next action**: none for A8; tag `m4` once the team agrees.
 
 ### 25 October 2026 — stream C: model card completed from the audit results (C8, C9, Robin)
 

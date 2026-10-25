@@ -78,11 +78,13 @@ first results; any deviation from the protocol will be stated explicitly in [`PR
 
 | Model | Trained parameters | Val macro-F1 | Test macro-F1 | Test accuracy | Training time |
 |---|---:|---:|---:|---:|---:|
-| TF-IDF + LogReg | — | — | 0.7625 | 0.8486 | Not recorded |
+| TF-IDF + LogReg (C = 1.0, not tuned) | — | 0.7666 | 0.7625 | 0.8486 | Not recorded |
 | Legal-BERT (full fine-tuning) | 109,559,140 | 0.7930 | 0.7905 | 0.8717 | 2,688 s |
 | Legal-BERT (LoRA, r=8) | 371,812 (0.34% of full) | 0.7552 | 0.7691 | 0.8527 | 2,021 s |
 
 The classifier test set is the chronological 2019 split. On the same 10,000 test clauses, Legal-BERT exceeds TF-IDF by **+0.0281 macro-F1** (95% paired-bootstrap CI **[0.0180, 0.0390]**, 1,000 resamples, seed 42; McNemar p = **1.71 × 10⁻¹⁶**), supporting a significant improvement under both pre-specified comparisons. The full fine-tuning vs. LoRA comparison gives Δ macro-F1 = +0.0214 (95% paired-bootstrap CI [0.0126, 0.0365], 1,000 resamples; McNemar p = 1.74 × 10⁻¹⁵). Only LoRA r=8 was run.
+
+**Deviation from protocol.** The pre-registered Model B was to have C and n-grams tuned on validation. The baseline actually compared (`tfidf-logreg_baseline_20261023`, notebook 01) uses a fixed C = 1.0 with 1-2 n-grams; a tuning grid was considered on 25/10 and not run (one fit takes about 187 s and 5.4 GB of RAM per C value). A reproduction of the same configuration gives a validation macro-F1 of 0.7666. Because the baseline was not tuned, the +0.0281 BERT vs TF-IDF gap may be slightly overstated; H1 is reported as supported with this caveat.
 
 Retrieval relevance is defined as matching the query clause's LEDGAR label. These values are from the fixed stratified 5% test-query sample (499 queries), not a full-test estimate or legal relevance judgment.
 

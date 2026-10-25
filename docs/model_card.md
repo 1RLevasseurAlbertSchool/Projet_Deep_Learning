@@ -60,9 +60,10 @@ The Legal-BERT result is from the final run `legal-bert_final_20261019-1523`; th
 `notebooks/01_eda_baseline.ipynb`. Both prediction files cover the same 10,000 test clauses in the same order.
 The paired comparison finds Legal-BERT ahead of TF-IDF by 0.0281 macro-F1 (95 % paired-bootstrap CI
 [0.0180, 0.0390], 1,000 resamples, seed 42; McNemar p = 1.71 × 10⁻¹⁶). This supports a statistically significant
-advantage on this test split under the pre-specified analyses. For full fine-tuning vs. LoRA, Δ macro-F1 = 0.0214
-(95 % paired-bootstrap CI [0.0126, 0.0365], 1,000 resamples, seed 42). The classifier test set is the 2019
-chronological split.
+advantage on this test split under the pre-specified analyses. Caveat: the TF-IDF baseline uses a fixed C = 1.0 and
+was not tuned on validation as pre-registered (validation macro-F1 0.7666), so this gap may be slightly overstated.
+For full fine-tuning vs. LoRA, Δ macro-F1 = 0.0214 (95 % paired-bootstrap CI [0.0126, 0.0365], 1,000 resamples,
+seed 42). The classifier test set is the 2019 chronological split.
 
 The audit notebook computes slice macro-F1 over the true classes represented in each slice. Training-frequency
 groups are defined by terciles of per-class train counts; clause-length groups use training word-count quartiles.
