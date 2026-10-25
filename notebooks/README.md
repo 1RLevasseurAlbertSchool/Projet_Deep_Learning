@@ -11,3 +11,4 @@ Reusable logic lives in `src/`; notebooks tell the story and call `src/`.
 | 04 | `04_transformer_finetuning.ipynb` | Colab (GPU): clone and installation, encoder screening, full fine-tuning, LoRA, single test evaluation (paired tests and calibration run locally with `scripts/`) | Robin | m4 |
 | 05 | `05_retrieval_eval.ipynb` | Two dense encoders, BM25 and MiniLM+BM25 RRF on a fixed stratified 5% test sample; no manual lawyer-query evaluation | Brian | — |
 | 06 | `06_bias_audit.ipynb` | Classifier slice metrics and counterfactual stress test bounded to 1,000 test clauses | Brian | audit |
+| 07 | `07_demo.ipynb` | End-to-end demo (bonus T4): 3 test clauses (confident and right, sent to a lawyer, confident error), a hand-written European clause, a French clause (prohibited use), a lawyer's question; needs `models/legal-bert_final/` | Robin | bonus |

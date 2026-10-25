@@ -65,6 +65,7 @@ To keep the retrieval comparison runnable, notebook 05 evaluates two dense encod
 | 04 | `04_transformer_finetuning.ipynb` | Colab fine-tuning: encoder screening, full fine-tuning, LoRA, single test evaluation | **Colab (GPU)** |
 | 05 | `05_retrieval_eval.ipynb` | Retrieval evaluation: MiniLM, BGE-small, BM25, MiniLM + BM25 RRF | Local |
 | 06 | `06_bias_audit.ipynb` | Classifier audit: per-slice performance, counterfactual stress test | Local, needs the test predictions and the final checkpoint |
+| 07 | `07_demo.ipynb` | End-to-end demo (bonus T4): clause → top-3 types, automatic / send to a lawyer, 5 closest training clauses; one lawyer question | Local, needs the final checkpoint |
 
 ## Main comparison (pre-registered on 14 October 2026, before any experiment)
 
@@ -185,6 +186,48 @@ Steps, in order:
    `scripts/summary_classification.py`, then notebook 03 (error analysis) and notebook 06 (audit, also needs the
    checkpoint). The exact commands are in the docstring of each script and in [`PROGRESS.md`](PROGRESS.md).
 
+## Demo
+
+End-to-end demo of the product (bonus T4, no training): a clause goes in; out come the **3 most probable clause
+types**, the decision **automatic / send to a lawyer** (confidence vs the 0.892 threshold chosen on validation) and the
+**5 most similar training clauses**. A lawyer can also search the clause bank with a free-text question.
+Code: `src/pipeline.py` (`ClauseReviewer`), `scripts/demo.py`, `notebooks/07_demo.ipynb`.
+
+**1. Get the classifier checkpoint** (gitignored, 438 MB). From the Drive folder of notebook 04,
+`MyDrive/ledgar_checkpoints/legal-bert_full_20261019-0916/checkpoint-11250/` (the best checkpoint of
+`legal-bert_full_20261019-0916`, i.e. the model evaluated once on test as `legal-bert_final_20261019-1523`), copy these
+4 files into `models/legal-bert_final/`:
+
+```
+models/legal-bert_final/
+├── config.json
+├── model.safetensors
+├── tokenizer.json
+└── tokenizer_config.json
+```
+
+If a file is missing, the demo stops with a message listing them.
+
+**2. Run it** (MPS / CUDA if available, else CPU):
+
+```bash
+python scripts/demo.py "Either party may terminate this Agreement upon thirty (30) days' prior written notice."
+```
+
+```bash
+python scripts/demo.py --question "termination clauses with a 30-day notice period"
+```
+
+Or open `notebooks/07_demo.ipynb` (3 test clauses, a hand-written European clause, a French clause, a lawyer's
+question). The first run downloads LEDGAR and the retrieval encoder and builds the index over the 60,000 training
+clauses (about 4.5 min on an Apple-silicon MPS GPU, encoder download included), cached in `data/indexes/`; later runs
+load it in a few seconds.
+
+**Caveats.** The retrieval encoder is BGE-small, ranked first on P@5 in `results/retrieval_summary.csv`; that
+benchmark used a stratified 5 % sample of test queries, so this is a convenience choice for the demo, not a validated
+selection. The demo clauses are illustrations, not an evaluation. Non-English clauses remain a prohibited use (see
+*What the system must not do*).
+
 ## Project structure
 
 ```
@@ -195,7 +238,7 @@ Steps, in order:
 ├── requirements.txt       # Runtime dependencies (local and Colab)
 ├── requirements-dev.txt   # requirements.txt + jupyterlab, ipykernel, pytest (local only)
 ├── data/                  # (gitignored) LEDGAR downloaded by src/data.py, embedding cache in indexes/
-├── notebooks/             # Numbered notebooks, read in order (01 → 06)
+├── notebooks/             # Numbered notebooks, read in order (01 → 07)
 ├── src/
 │   ├── config.py          # Paths, seed, dataset name, shared constants
 │   ├── data.py            # LEDGAR loading + label names + head/middle/tail groups (shared contract)
@@ -204,6 +247,7 @@ Steps, in order:
 │   ├── comparison.py      # Paired comparison of two runs on aligned prediction files (A8)
 │   ├── calibration.py     # ECE, reliability diagram, human-review threshold, per-class view (A9)
 │   ├── analysis.py        # Error analysis of Legal-BERT vs TF-IDF (B7, B9)
+│   ├── pipeline.py        # End-to-end ClauseReviewer: type + review decision + similar clauses (T4)
 │   ├── models/
 │   │   └── transformer.py # HF fine-tuning (full and LoRA), single test evaluation from a checkpoint
 │   ├── retrieval/
@@ -223,7 +267,8 @@ Steps, in order:
 │   ├── calibration_report.py            # Calibration and human-review threshold (A9)
 │   ├── calibration_per_class.py         # Per-class precision at the threshold (A9)
 │   ├── regenerate_tfidf_predictions.py  # TF-IDF test predictions, checked against the run metrics
-│   └── summary_classification.py        # Unified comparison table and figures (B8)
+│   ├── summary_classification.py        # Unified comparison table and figures (B8)
+│   └── demo.py                          # Command-line demo of the clause reviewer (T4)
 ├── eval/                  # Draft lawyer questions, counterfactual notes, unlabelled OOD probes
 ├── tests/                 # Unit tests (pytest), e.g. metrics checked against the course exercises
 ├── results/               # Versioned metrics (JSON/CSV) and figures; predictions gitignored

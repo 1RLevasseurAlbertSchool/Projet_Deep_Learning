@@ -36,8 +36,10 @@
   `docs/model_card.md`.
 - **Dropped or cancelled (25/10).** LSTM (B6) dropped by team decision: no BERT vs LSTM pair, error analysis done
   without it. Near-duplicate check (B4) cancelled as out of scope: no de-duplicated test score ("not done (out of
-  scope)" in the model card, listed as a limitation). Bonus demo (T4) not started; Session 7 material (T5) never
-  available.
+  scope)" in the model card, listed as a limitation). Session 7 material (T5) never available.
+- **Bonus demo (T4, 25/10).** `ClauseReviewer` (`src/pipeline.py`), `scripts/demo.py` and notebook 07: clause →
+  top-3 types, automatic / send to a lawyer (threshold 0.892), 5 closest training clauses (BGE-small index); no
+  retraining, illustrations only (README, *Demo*).
 - **Stated deviations from the pre-registered protocol**: TF-IDF C not tuned; LoRA r = 8 only; no temperature
   scaling. Final status of every task: [`tasks/todo.md`](tasks/todo.md).
 
@@ -108,6 +110,7 @@
 - [ ] Notebooks run on a fresh clone (T3).
 - [ ] Slides + rehearsal (T1, T2).
 - [ ] Tags `m1`-`m4` and `v1.0`.
+- [x] Bonus end-to-end demo (T4, 25/10): `src/pipeline.py`, `scripts/demo.py`, notebook 07.
 
 ## 3. Results observed so far
 
@@ -392,6 +395,34 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — bonus end-to-end demo (T4, Robin)
+
+- **Code** (no training, no tuning): `src/pipeline.py::ClauseReviewer` loads the final classifier from
+  `models/legal-bert_final/` (the 4 files of the best checkpoint of `legal-bert_full_20261019-0916`, i.e. the model
+  evaluated as `legal-bert_final_20261019-1523`) with its own tokenizer, truncation at 256 tokens, on MPS / CUDA /
+  CPU; the human-review threshold 0.892 is read from the calibration JSON (recommended operating point, chosen on
+  validation; automatic when confidence >= threshold, the same rule as `src/calibration.py`); the retrieval index is
+  `build_dense_index` with the encoder ranked first on P@5 in `results/retrieval_summary.csv` (BGE-small; MiniLM if the
+  file is missing). `review(text, k)` → top-3 types, decision, k closest training clauses (label, score, first 200
+  characters); `search(question, k)` → retrieval only. A missing checkpoint raises a `FileNotFoundError` listing the 4
+  files and the Drive folder. CLI: `scripts/demo.py "clause"` / `--question "..."`.
+- **Index**: BGE-small embeddings of the 60,000 training clauses built and cached in **270 s** on MPS (Apple
+  silicon, encoder download included); later loads take 3-4 s.
+- **Notebook 07** run top to bottom (local, MPS). Observed outputs (illustrations, not scores):
+  test 9690 *Base Salary* 0.994 → automatic, correct; test 9550 *Waivers* 0.844 → sent to a lawyer, correct
+  (*No Waivers* second, 0.141); test 1201 (from `error_analysis_reading.csv`) *Entire Agreements* 0.960 → automatic,
+  wrong (gold *Integration*, which 4 of the 5 retrieved clauses carry); hand-written French-law / Paris-court clause
+  *Governing Laws* 0.903 → automatic; French termination clause *Notices* 0.214 → sent to a lawyer, wrong label and
+  unrelated neighbours; question "termination clauses with a 30-day notice period": 2 of the 5 hits (near-identical)
+  are 30-day termination clauses. The demo probabilities of the 3 test clauses (0.9939, 0.8445, 0.9599) agree with the saved test
+  predictions (0.9939, 0.8443, 0.9601) within 0.0002 (fp32 on MPS vs fp16 on the T4); same predicted labels.
+- **Caveats**: the BGE choice comes from a benchmark on a 5 % sample of *test* queries (convenience for the demo,
+  not a validated selection); the three test clauses were picked by hand from the saved predictions to show each case.
+- **Tests**: `tests/test_pipeline.py`, 14 tests with a fake model, tokenizer and index (no download);
+  `python -m pytest -q` → 71 passed.
+- **Docs**: README *Demo* section (checkpoint, commands, index time, caveats), notebook table and project tree;
+  `notebooks/README.md`; T4 ticked in `tasks/todo.md`.
 
 ### 25 October 2026 — final documentation consistency review (Robin)
 

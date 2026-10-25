@@ -68,7 +68,7 @@
 - [ ] **T2** Timed 10-min rehearsal + likely CTO questions — Thu 22/10 — **open**
 - [ ] **T3** Code freeze, notebooks run on a fresh clone, tag `v1.0` — Thu 22/10 23:59 — documentation frozen 25/10
   (final consistency review); **open**: fresh-clone check, tags `m1`-`m4` and `v1.0`
-- ~~**T4**~~ (Bonus) Demo "clause → type + confidence + 5 closest clauses" (notebook or Streamlit) — **dropped 25/10**:
-  not started, it was planned only if the team got ahead of schedule
+- [x] **T4** (Bonus) Demo "clause → type + confidence + 5 closest clauses" — **done 25/10** (Robin): `src/pipeline.py`
+  (`ClauseReviewer`), `scripts/demo.py`, `notebooks/07_demo.ipynb`, `tests/test_pipeline.py`; no retraining
 - ~~**T5**~~ Integrate the content of Session 7 (bias audit) into the C6-C9 plan — **cancelled 25/10**: the Session 7
   material was not available before the code freeze; the audit follows the brief
