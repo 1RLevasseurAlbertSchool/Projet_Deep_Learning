@@ -54,7 +54,7 @@
 | Legal-BERT full fine-tuning — accuracy (micro-F1) | 0.8717 | Not estimated |
 | TF-IDF + logistic regression — macro-F1 | 0.7625 | Not estimated |
 | TF-IDF + logistic regression — accuracy | 0.8486 | Not estimated |
-| Legal-BERT, de-duplicated test macro-F1 | Not computed | — |
+| Legal-BERT, de-duplicated test macro-F1 | not done (out of scope) | — |
 
 The Legal-BERT result is from the final run `legal-bert_final_20261019-1523`; the TF-IDF result is from
 `notebooks/01_eda_baseline.ipynb`. Both prediction files cover the same 10,000 test clauses in the same order.
@@ -249,9 +249,13 @@ threshold chosen to just reach its target on validation.
   as "same LEDGAR label"; these are not full-test estimates and not lawyer-judged relevance (section 7).
 - **No temperature scaling**: the prediction files store only the probability of the predicted class, so the
   over-confidence measured in section 8 (test ECE 0.0425) is not corrected.
-- **LSTM not delivered**: the BiLSTM baseline was excluded from this delivery (README scope note), so the planned
+- **LSTM dropped**: the BiLSTM baseline was dropped by team decision on 25/10 (README scope note), so the planned
   Legal-BERT vs LSTM comparison is not reported; the classification comparison covers TF-IDF, full Legal-BERT
   fine-tuning and LoRA.
+- **No near-duplicate check**: the train/test near-duplicate analysis (task B4) was cancelled as out of scope.
+  Notebook 01 checks exact duplicates only, so boilerplate clauses repeated almost verbatim between the 2016-2017
+  training contracts and the 2019 test contracts may make the test scores optimistic; no de-duplicated test score
+  is reported (section 4).
 - No out-of-distribution evaluation: the synthetic probes in `eval/ood/` are unlabelled and were not used by the
   final audit, so nothing is measured on European or French contracts.
 - The shared LEDGAR loader does not expose row-level contract years. The test split is 2019 only, so no

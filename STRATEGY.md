@@ -1,5 +1,8 @@
 # Project strategy
 
+> **Initial plan of 14/10/2026, kept as written.** What was actually done (dropped LSTM, cancelled near-duplicate
+> check, protocol deviations, results) is in [`PROGRESS.md`](PROGRESS.md) and [`tasks/todo.md`](tasks/todo.md).
+
 > Reference document for the organisation: objectives, split into three work streams, schedule, dependencies,
 > risks and presentation plan. The detailed task list is in [`tasks/todo.md`](tasks/todo.md).
 

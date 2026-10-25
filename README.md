@@ -18,12 +18,12 @@ Final project of the course **Deep Learning for Sequential Data and NLP** (MSA-D
 
 | Member | Work stream | Course milestones |
 |---|---|---|
-| **Robin** | A — Transformers: BERT-class fine-tuning, LoRA, paired tests, calibration | m4 |
-| **Amandine** | B — Data, baseline & EDA: LEDGAR loading, TF-IDF, error analysis | m1 |
+| **Robin** | A — Transformers: BERT-class fine-tuning, LoRA, paired tests, calibration; error analysis and unified comparison (B7-B9) | m3, m4 |
+| **Amandine** | B — Data, baseline & EDA: LEDGAR loading, TF-IDF | m1 |
 | **Brian** | C — Retrieval & audit: sentence-transformer index, retrieval evaluation, bias audit, model card | m2, audit |
 
-The detailed plan, task split and schedule are in [`STRATEGY.md`](STRATEGY.md) and [`tasks/todo.md`](tasks/todo.md).
-The actual state of the project is in [`PROGRESS.md`](PROGRESS.md).
+The initial plan (14/10) is in [`STRATEGY.md`](STRATEGY.md); the final status of every task is in
+[`tasks/todo.md`](tasks/todo.md) and what was actually done, with the results, in [`PROGRESS.md`](PROGRESS.md).
 
 ## Data — LEDGAR (LexGLUE)
 
@@ -41,16 +41,30 @@ The actual state of the project is in [`PROGRESS.md`](PROGRESS.md).
 
 ## Pipeline and milestones
 
-| Milestone | Content | Notebook / script | Status |
+| Milestone | Content | Deliverable | Status |
 |---|---|---|---|
-| **m1** | LEDGAR loading, class distribution, **TF-IDF + logistic regression** baseline, macro-F1 | `notebooks/01_eda_baseline.ipynb` | Results available |
-| **m2** | **Sentence-transformer** retrieval index over the clauses (embed, normalise, top-k cosine) + queries checked by hand | `notebooks/02_retrieval_index.ipynb` | ⏳ |
-| **m4** | **BERT-class fine-tuning** (full) + **LoRA** + trade-off table + paired tests | `notebooks/04_transformer_finetuning.ipynb` | Results available |
-| audit | Two dense encoders, BM25 and hybrid retrieval evaluation on a fixed stratified 5% test sample; focused classifier slice and counterfactual audit; model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb` | Retrieval results available; classifier audit running |
+| **m1** | LEDGAR loading, class distribution, exact-duplicate check, **TF-IDF + logistic regression** baseline (C = 1.0, not tuned), macro-F1 | `notebooks/01_eda_baseline.ipynb`, `results/runs/tfidf-logreg_baseline_20261023/` | ✅ |
+| **m2** | **Sentence-transformer** retrieval index over the training clauses (embed, normalise, top-k cosine) + 10 searches checked by hand | `notebooks/02_retrieval_index.ipynb`, `src/retrieval/dense.py` | ✅ |
+| **m3** | Error analysis of Legal-BERT vs TF-IDF: per-class F1 vs frequency, top confusions, truncation, 20 errors read (the LSTM was dropped on 25/10) | `notebooks/03_error_analysis.ipynb`, `src/analysis.py`, `results/error_analysis_*.csv` | ✅ (without LSTM) |
+| **m4** | **BERT-class fine-tuning** (full) + **LoRA** r = 8 + trade-off table + paired tests + calibration | `notebooks/04_transformer_finetuning.ipynb`, `results/runs/`, `results/lora_tradeoff.csv`, `results/paired_tests.csv`, `results/calibration_*` | ✅ |
+| audit | Two dense encoders, BM25 and hybrid retrieval evaluation on a fixed stratified 5% test sample; focused classifier slice and counterfactual audit; model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb`, `results/retrieval_summary.csv`, `results/audit/`, `docs/model_card.md` | ✅ |
+
+The Git tags `m1` to `m4` and `v1.0` are not created yet (done at delivery).
 
 To keep the retrieval comparison runnable, notebook 05 evaluates two dense encoders, BM25 and a MiniLM+BM25 hybrid on a reproducible, stratified 5% sample of test clauses. These are sampled estimates, not full-test scores; indexing still uses the full training bank. Lawyer-query examples are retained as drafts but are not evaluated because no domain-expert relevance judgments are available. Notebook 06 reports classifier slices and counterfactual results from a bounded sample. It does not claim a broad audit of contract types, parties, languages, or retrieval robustness.
 
-**Scope note:** the planned LSTM comparison is excluded from this delivery. The classification comparison therefore covers the TF-IDF baseline, full Legal-BERT fine-tuning, and Legal-BERT LoRA.
+**Scope note:** the planned LSTM comparison was dropped by team decision on 25/10. The classification comparison therefore covers the TF-IDF baseline, full Legal-BERT fine-tuning, and Legal-BERT LoRA. The train/test near-duplicate check (B4) was cancelled as out of scope: notebook 01 checks exact duplicates only, and no score on a de-duplicated test set is reported.
+
+### Notebooks
+
+| # | Notebook | Content | Where it runs |
+|---|---|---|---|
+| 01 | `01_eda_baseline.ipynb` | LEDGAR EDA, exact-duplicate check, TF-IDF + LogReg baseline | Local (CPU) |
+| 02 | `02_retrieval_index.ipynb` | MiniLM index over the training bank, 10 searches checked by hand (m2) | Local |
+| 03 | `03_error_analysis.ipynb` | Error analysis of Legal-BERT vs TF-IDF (m3) | Local, needs the test predictions |
+| 04 | `04_transformer_finetuning.ipynb` | Colab fine-tuning: encoder screening, full fine-tuning, LoRA, single test evaluation | **Colab (GPU)** |
+| 05 | `05_retrieval_eval.ipynb` | Retrieval evaluation: MiniLM, BGE-small, BM25, MiniLM + BM25 RRF | Local |
+| 06 | `06_bias_audit.ipynb` | Classifier audit: per-slice performance, counterfactual stress test | Local, needs the test predictions and the final checkpoint |
 
 ## Main comparison (pre-registered on 14 October 2026, before any experiment)
 
@@ -110,12 +124,16 @@ Retrieval relevance is defined as matching the query clause's LEDGAR label. Thes
 
 ## What the system must not do
 
-Provisional summary — the argued, quantified version will be in [`docs/model_card.md`](docs/model_card.md):
+Summary of the prohibited uses; each one is argued with the measured evidence in section 3 of the final
+[model card](docs/model_card.md#3-prohibited-or-discouraged-uses):
 
-- give legal advice or judge the validity / enforceability of a clause;
-- classify **non-English** clauses (models trained on US legal English);
-- treat a predicted class as reliable for clause types **outside the 100 LEDGAR classes**;
-- replace a lawyer's review: it **prioritises** and **suggests**, it does not decide.
+- classify **non-English** clauses or clauses drafted far from US SEC practice (never tested);
+- label clause types **outside the 100 LEDGAR classes** (there is no "other" class, and confidence is not a reliable
+  alarm);
+- give **legal advice** or judge the validity, enforceability or fairness of a clause;
+- label **rare clause types** fully automatically (tail macro-F1 0.716 vs 0.932 for head classes);
+- take **decisions without human review**, in particular from labels below the 0.892 confidence threshold;
+- process **whole documents**: it was trained and evaluated clause by clause.
 
 ## Installation
 
@@ -126,7 +144,7 @@ cd Projet_Deep_Learning
 python -m venv .venv && source .venv/bin/activate   # Python 3.11+
 pip install -r requirements-dev.txt   # runtime dependencies + jupyterlab, ipykernel, pytest
 
-python -m pytest -q          # tests of the shared metrics
+python -m pytest -q          # unit tests (CPU, no model download)
 python -m src.data           # checks LEDGAR loading (60k / 10k / 10k, 100 labels)
 ```
 
@@ -142,34 +160,77 @@ upgrade the `ipykernel` / `jupyter-client` versions pinned by `google-colab`), t
 - The classification test set is used **only once** per final model; retrieval uses a fixed stratified 5% sample
   solely for its final benchmark, not for model selection. Classifier decisions are made on the validation set.
 
+## How to reproduce
+
+The versioned files in `results/` (run configs and metrics, CSVs, figures) are enough to read every number in this
+README and in the model card. Re-running a step needs the inputs below, which are **gitignored**:
+
+| Gitignored input | Produced by | How to get it back |
+|---|---|---|
+| `data/` (LEDGAR) and `data/indexes/` (embedding cache) | `src/data.py`, `src/retrieval/dense.py` | Downloaded from Hugging Face / rebuilt automatically on first use |
+| `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet`, `legal-bert_lora-r8_20261020-0940_{validation,test}.parquet` | Notebook 04 on Colab | Copy them from `results/predictions/` of the Drive clone used by notebook 04 (the test set is evaluated once: `scripts/evaluate_checkpoint.py` refuses a second test evaluation of the same run unless `--force`) |
+| `results/predictions/tfidf-logreg_baseline_20261023_test.parquet` | Notebook 01 | `python scripts/regenerate_tfidf_predictions.py` (refits the same configuration, saves only if the test metrics equal the run's `metrics.json`) |
+| Checkpoints (`*.safetensors`, `models/`) | Notebook 04 on Colab | In the Drive checkpoints folder of notebook 04; notebook 06 expects the final checkpoint at `models/ledgar_checkpoints/legal-bert_full_20261019-0916/checkpoint-11250` |
+
+Steps, in order:
+
+1. **Local**: `pip install -r requirements-dev.txt`, `python -m pytest -q`, `python -m src.data`.
+2. **Local (CPU)**: notebook 01 (TF-IDF baseline; one fit takes about 187 s and 5.4 GB of RAM), notebooks 02 and 05
+   (retrieval).
+3. **Colab (GPU)**: notebook 04 — `scripts/train_transformer.py` (DistilBERT and Legal-BERT screening on validation,
+   LoRA r = 8 with `--eval-test`), then `scripts/evaluate_checkpoint.py --source-run legal-bert_full_20261019-0916`
+   (single test evaluation). Writes `results/runs/<run_id>/`, the prediction files and the checkpoints.
+4. **Local, from the prediction files**: `scripts/calibration_report.py` and `scripts/calibration_per_class.py`
+   (`--run-id legal-bert_final_20261019-1523`), `scripts/lora_tradeoff_table.py`, `scripts/paired_tests.py`,
+   `scripts/summary_classification.py`, then notebook 03 (error analysis) and notebook 06 (audit, also needs the
+   checkpoint). The exact commands are in the docstring of each script and in [`PROGRESS.md`](PROGRESS.md).
+
 ## Project structure
 
 ```
 ├── README.md              # This file: overview, pre-registered comparison, results
 ├── CLAUDE.md              # Working rules of the project (humans + Claude Code)
 ├── PROGRESS.md            # Operational log: actual state, results, problems, next actions
-├── STRATEGY.md            # Strategy, A/B/C split, schedule, risks, presentation plan
+├── STRATEGY.md            # Initial plan (14/10): A/B/C split, schedule, risks, presentation plan
 ├── requirements.txt       # Runtime dependencies (local and Colab)
 ├── requirements-dev.txt   # requirements.txt + jupyterlab, ipykernel, pytest (local only)
-├── data/                  # (gitignored) raw/ and processed/ — LEDGAR downloaded by src/data.py
-├── notebooks/             # Numbered notebooks, read in order (00 → 06)
+├── data/                  # (gitignored) LEDGAR downloaded by src/data.py, embedding cache in indexes/
+├── notebooks/             # Numbered notebooks, read in order (01 → 06)
 ├── src/
 │   ├── config.py          # Paths, seed, dataset name, shared constants
 │   ├── data.py            # LEDGAR loading + label names + head/middle/tail groups (shared contract)
 │   ├── metrics.py         # Macro-F1, per-class F1, paired bootstrap, McNemar
-│   ├── utils.py           # Seed, saving runs
-│   ├── calibration.py     # Stream A: ECE, reliability diagram, human-review threshold
-│   ├── models/            # Streams A and B: TF-IDF, LSTM, HF fine-tuning, LoRA
-│   ├── retrieval/         # Stream C: sentence-transformer index and retrieval evaluation
-│   └── audit/             # Stream C: slices, counterfactual perturbations
-├── scripts/               # Command-line entry points (training, evaluation)
-├── eval/                  # Hand-built lawyer questions and counterfactuals
+│   ├── utils.py           # Seed, saving runs and predictions, single-use test guard
+│   ├── comparison.py      # Paired comparison of two runs on aligned prediction files (A8)
+│   ├── calibration.py     # ECE, reliability diagram, human-review threshold, per-class view (A9)
+│   ├── analysis.py        # Error analysis of Legal-BERT vs TF-IDF (B7, B9)
+│   ├── models/
+│   │   └── transformer.py # HF fine-tuning (full and LoRA), single test evaluation from a checkpoint
+│   ├── retrieval/
+│   │   ├── dense.py       # Normalised sentence-embedding index, search(query, k)
+│   │   ├── hybrid.py      # BM25 and reciprocal-rank fusion
+│   │   └── evaluation.py  # P@k, MRR, nDCG with same-label relevance
+│   └── audit/
+│       ├── slices.py      # Per-slice metrics (frequency, length, party-role proxies)
+│       ├── perturb.py     # Counterfactual perturbations
+│       └── classifier.py  # Inference adapter for a saved HF checkpoint
+├── scripts/
+│   ├── token_lengths.py                 # Token-length distribution (choice of max_length, A3)
+│   ├── train_transformer.py             # Fine-tuning, full or LoRA (A1-A5, A7)
+│   ├── evaluate_checkpoint.py           # Single test evaluation of the run chosen on validation (A6)
+│   ├── lora_tradeoff_table.py           # Full fine-tuning vs LoRA table (A7)
+│   ├── paired_tests.py                  # Paired bootstrap + McNemar (A8)
+│   ├── calibration_report.py            # Calibration and human-review threshold (A9)
+│   ├── calibration_per_class.py         # Per-class precision at the threshold (A9)
+│   ├── regenerate_tfidf_predictions.py  # TF-IDF test predictions, checked against the run metrics
+│   └── summary_classification.py        # Unified comparison table and figures (B8)
+├── eval/                  # Draft lawyer questions, counterfactual notes, unlabelled OOD probes
 ├── tests/                 # Unit tests (pytest), e.g. metrics checked against the course exercises
 ├── results/               # Versioned metrics (JSON/CSV) and figures; predictions gitignored
 ├── docs/
 │   └── model_card.md      # Intended / prohibited use, per-slice performance, limitations
 └── tasks/
-    ├── todo.md            # Task list per work stream, with dates
+    ├── todo.md            # Task list per work stream, with final statuses
     └── lessons.md         # Improvement loop: mistakes and rules to avoid them
 ```
 

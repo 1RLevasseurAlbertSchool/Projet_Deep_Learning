@@ -6,36 +6,40 @@
 
 ## 1. Overall status
 
-**Current status:** 🟡 Repository initialised and pushed to GitHub (structure, documentation, pre-registered main
-comparison, shared modules `src/config.py`, `src/data.py`, `src/metrics.py`, `src/utils.py`), documentation
-translated into English. `load_ledgar()` checked on the real data (60,000 / 10,000 / 10,000, 100 labels).
-Stream A: full DistilBERT (A4) and Legal-BERT (A5) fine-tuned on Colab, validation macro-F1 0.7863 and 0.7930;
-`legal-bert_full_20261019-0916` selected on validation and evaluated once on test (A6): **test macro-F1 0.7905,
-accuracy 0.8717**. Team now works directly on `main` (no feature branches).
-LoRA r=8 on Legal-BERT (A7, Colab, same recipe): 371,812 trainable parameters (0.34 % of full FT), adapter of
-1.49 MB on disk vs 438.3 MB, −24.8 % training time, −39.2 % peak GPU memory, **test macro-F1 0.7691 vs 0.7905**; the
-paired test (A8, secondary comparison) finds full FT significantly better: **ΔF1 = +0.0214 [+0.0126; +0.0365]**,
-McNemar p = 1.7e-15. Only r = 8 was run (pre-registered: r ∈ {4, 8, 16}).
-Calibration (A9): the final model is over-confident (test ECE 0.0425, mean confidence 0.9131 for accuracy 0.8717);
-human-review threshold 0.892 chosen on validation → **78.9 % of the test clauses handled automatically at precision
-0.9489**. Per class at that threshold: 11 classes below 0.90 precision (9 with ≥ 20 automatic labels), not mostly tail
-(4 tail, 5 middle, 2 head); rare classes pay in coverage and hidden errors instead (tail clauses 63.2 % automatic vs
-88.4 % head, and 14.2 % of the automatic ones wrong vs 2.6 %).
-Main comparison (A8, run by stream C): Legal-BERT vs TF-IDF + LogReg (`tfidf-logreg_baseline_20261023`, test
-macro-F1 0.7625) → **ΔF1 = +0.0281 [+0.0180; +0.0390]**, McNemar p = 1.7e-16: **H1 supported, with a caveat** —
-the baseline uses a fixed C = 1.0 and was not tuned on validation as pre-registered (validation macro-F1 0.7666), so
-the gap may be slightly overstated (see the 25/10 log entry). LSTM (B6) **dropped by team decision on 25/10**:
-no third pair.
-Error analysis (B7 / B9, notebook 03, 25/10): the gain over TF-IDF is spread evenly over head / middle / tail
-classes (mean per-class ΔF1 +0.0295 / +0.0250 / +0.0298); TF-IDF is better on 16 classes; most errors are
-near-synonym label pairs that TF-IDF shares; truncation at 256 tokens is not a major error source.
-Unified comparison (B8, 25/10): `results/summary_classification.csv` + 3 figures (`results/figures/summary_*.png`), one row per model (TF-IDF, DistilBERT validation only, Legal-BERT final, LoRA r=8); the README results table is generated from it.
+**Final status (25/10/2026): ✅ code and documentation frozen; left: fresh-clone check, Git tags and slides (section 5).**
 
-**Stream C scope update (23/10):** notebook 05 compares two dense encoders, BM25, and MiniLM+BM25 RRF on a
-reproducible, label-stratified 5% sample of test queries, retaining the full training bank. Draft lawyer queries are
-not evaluated because domain-expert judgments are unavailable. Notebook 06 keeps
-classifier slice metrics and limits counterfactual inference to at most 1,000 sampled test clauses. Synthetic OOD
-probes and retrieval-stability audit claims remain out of scope.
+- **Classification (m1, m4).** Legal-BERT (`nlpaueb/legal-bert-base-uncased`, full fine-tuning, `max_length` 256,
+  3 epochs) selected on validation over DistilBERT (validation macro-F1 0.7930 vs 0.7863) and evaluated once on the
+  2019 test set (`legal-bert_final_20261019-1523`): **test macro-F1 0.7905, accuracy 0.8717**. Baseline TF-IDF +
+  LogReg (`tfidf-logreg_baseline_20261023`): test macro-F1 0.7625, accuracy 0.8486.
+- **Main comparison (pre-registered).** Legal-BERT − TF-IDF: **ΔF1 = +0.0281 [+0.0180; +0.0390]**, McNemar
+  p = 1.7e-16: **H1 supported, with a caveat** — the baseline uses a fixed C = 1.0 and was not tuned on validation
+  as pre-registered (validation macro-F1 0.7666), so the gap may be slightly overstated.
+- **Secondary comparison (A7, A8).** LoRA r = 8 (r = 4 / 16 not run): 371,812 trainable parameters (0.34 %),
+  adapter of 1.49 MB vs 438.3 MB, −24.8 % training time, −39.2 % peak GPU memory, test macro-F1 0.7691; full
+  fine-tuning is significantly better: **ΔF1 = +0.0214 [+0.0126; +0.0365]**, McNemar p = 1.7e-15.
+- **Calibration (A9).** Over-confident model (test ECE 0.0425, mean confidence 0.9131 for accuracy 0.8717);
+  human-review threshold 0.892 chosen on validation → 78.9 % of the test clauses labelled automatically at
+  precision 0.9489. Rare classes pay in coverage and hidden errors (14.2 % of the automatic tail labels wrong vs
+  2.6 % for head), not in per-class precision.
+- **Error analysis and unified comparison (m3: B7, B8, B9, Robin).** The gain over TF-IDF is spread evenly over
+  head / middle / tail classes (mean per-class ΔF1 +0.0295 / +0.0250 / +0.0298); most errors are near-synonym label
+  pairs that TF-IDF shares; truncation at 256 tokens is not a major error source. The 20 error tags were reviewed
+  by Robin. One table and three figures compare all classifiers (`results/summary_classification.csv`).
+- **Retrieval (m2, C1-C5, Brian).** MiniLM index over the training bank; the 10 manual checks of notebook 02 were
+  completed by Brian. On a stratified 5 % test-query sample (499 queries, same-label relevance), BGE-small is best
+  (P@5 0.7876, MRR@10 0.8752, nDCG@10 0.7723), ahead of MiniLM + BM25 RRF, BM25 and MiniLM. The 28 draft lawyer
+  questions are not evaluated (no expert judgments).
+- **Audit and model card (C6-C9).** Tail classes reach macro-F1 0.716 vs 0.932 for head; 1 prediction flip in 236
+  counterfactual pairs from 1,000 sampled test clauses (weak evidence of robustness, small samples); party roles are
+  keyword proxies; synthetic OOD probes and retrieval-stability claims are out of scope. Final model card in
+  `docs/model_card.md`.
+- **Dropped or cancelled (25/10).** LSTM (B6) dropped by team decision: no BERT vs LSTM pair, error analysis done
+  without it. Near-duplicate check (B4) cancelled as out of scope: no de-duplicated test score ("not done (out of
+  scope)" in the model card, listed as a limitation). Bonus demo (T4) not started; Session 7 material (T5) never
+  available.
+- **Stated deviations from the pre-registered protocol**: TF-IDF C not tuned; LoRA r = 8 only; no temperature
+  scaling. Final status of every task: [`tasks/todo.md`](tasks/todo.md).
 
 **Deadlines:**
 - code freeze: **Thursday 22 October 2026, 23:59** (internal margin);
@@ -52,27 +56,27 @@ probes and retrieval-stability audit claims remain out of scope.
 - [x] Shared modules: `src/config.py`, `src/data.py`, `src/metrics.py`, `src/utils.py`.
 - [x] GitHub repository created and first push (`1RLevasseurAlbertSchool/Projet_Deep_Learning`).
 - [x] Documentation translated into English (18/10/2026).
-- [ ] Team environments installed (local + Colab GPU).
+- [x] Environments that produced the deliverables installed (Robin: local + Colab GPU; Brian: local).
 
 ### m1 — Data and baseline (Amandine)
-- [ ] `load_ledgar()` validated on the real data.
-- [ ] Class distribution, years, lengths (words / tokens).
-- [ ] Train/test near-duplicates measured.
+- [x] `load_ledgar()` validated on the real data (18/10).
+- [x] Class distribution and exact-text duplicates (notebook 01); token lengths (A3); no row-level years in the loader.
+- [ ] ~~Train/test near-duplicates measured.~~ Cancelled as out of scope (B4, 25/10).
 - [x] TF-IDF + LogReg: validation 0.7666 / test 0.7625 macro-F1 (C = 1.0 fixed, not tuned — stated deviation).
-- [ ] Tag `m1`.
+- [ ] Tag `m1` (at delivery).
 
 ### m2 — Retrieval index (Brian)
 - [x] Implemented reusable MiniLM dense retrieval with normalised cosine search and a validated embedding cache.
 - [x] Created notebook 02 with 10 qualitative searches (5 lawyer questions + 5 validation clauses).
-- [ ] Run notebook on the full LEDGAR data, build the index, and complete the 10 manual relevance checks.
-- [ ] Tag `m2`.
+- [x] Notebook run on the full LEDGAR data (23/10), index built, the 10 manual relevance checks completed by Brian.
+- [ ] Tag `m2` (at delivery).
 
 ### m3 — LSTM and error analysis (Amandine; error analysis done by Robin)
 - [ ] ~~LSTM / BiLSTM with packing and GloVe.~~ Dropped by team decision (25/10).
 - [x] Per-class F1, most confused classes, truncation check, 20 errors read: Legal-BERT vs TF-IDF (B7 / B9,
   notebook 03, Robin, 25/10).
 - [x] Unified comparison table + figures of all classifiers (B8, `scripts/summary_classification.py`, Robin, 25/10).
-- [ ] Tag `m3`.
+- [ ] Tag `m3` (at delivery).
 
 ### m4 — Transformers (Robin)
 - [x] Generic fine-tuning script (`src/models/transformer.py`, `scripts/train_transformer.py`) + Colab notebook 04.
@@ -87,23 +91,23 @@ probes and retrieval-stability audit claims remain out of scope.
 - [x] LoRA run + trade-off table (A7, 20/10) — r = 8 only, r = 4 / 16 not run (stated deviation).
 - [x] Paired tests: full FT vs LoRA r=8 (20/10); BERT vs TF-IDF (main, by stream C) — ΔF1 = +0.0281, baseline not
   tuned on validation (stated deviation, 25/10). BERT vs LSTM dropped (no LSTM, team decision 25/10).
-- [ ] Tag `m4`.
+- [ ] Tag `m4` (at delivery).
 
 ### Retrieval and audit (Brian)
 - [x] C1 implementation: cached, normalized dense index with batched cosine search.
 - [x] C2 notebook: 10 qualitative m2 searches prepared (5 lawyer questions + 5 validation clauses).
 - [x] C3 draft: 28 lawyer questions, including numeric and jurisdiction constraints; retained as illustrative future queries, not evaluated because domain-expert judgments are unavailable.
 - [x] C4/C5 implementation: same-label ranking metrics for MiniLM, BGE-small, BM25, and MiniLM+BM25 RRF on a fixed stratified 5% test-query sample.
-- [ ] Run retrieval notebook, review the 10 m2 searches, and generate `results/retrieval_summary.csv`; C3 lawyer-query evaluation is out of scope.
+- [x] Retrieval notebook 05 run and `results/retrieval_summary.csv` generated (23/10); the 10 m2 searches reviewed by Brian; C3 lawyer-query evaluation is out of scope.
 - [x] C6/C7 implementation prepared: train-defined frequency/length slices, rule-detected party-role proxies, and generated counterfactuals.
 - [x] C8 notebook 06 run on the final model: slice metrics and counterfactual results saved in `results/audit/` (25/10).
 - [x] C9 model card completed from the measured audit results: per-slice table, counterfactual table, concrete prohibited uses, limitations (25/10).
 
 ### Delivery
-- [ ] README results section filled with real results.
-- [ ] Notebooks run on a fresh clone.
-- [ ] Slides + rehearsal.
-- [ ] Tag `v1.0`.
+- [x] README results section filled with real results (25/10) and final documentation consistency review (25/10).
+- [ ] Notebooks run on a fresh clone (T3).
+- [ ] Slides + rehearsal (T1, T2).
+- [ ] Tags `m1`-`m4` and `v1.0`.
 
 ## 3. Results observed so far
 
@@ -375,19 +379,9 @@ before the first push.
 
 ## 5. Next immediate action
 
-1. Robin: add Amandine and Brian as collaborators on GitHub (if not done yet).
-2. Everyone: work on `main`, `git pull` before starting (see `CLAUDE.md`, Git section).
-3. Done 25/10: B5 (TF-IDF + LogReg) delivered and the main comparison A8 run by stream C (baseline not tuned on
-   validation: see the 25/10 log entry). BERT vs LSTM dropped with the LSTM.
-4. Robin: copy `results/predictions/legal-bert_final_20261019-1523_{validation,test}.parquet` and
-   `legal-bert_lora-r8_20261020-0940_{validation,test}.parquet` from the Drive clone (gitignored, absent from local
-   checkouts) to the machines running A8 and C8 (done on Robin's laptop).
-5. Robin (optional, if GPU time allows): LoRA r = 4 and r = 16 (notebook 04, section 10, `--lora-r 4` / `16`, once
-   each), then re-run the trade-off table and the full vs LoRA paired tests.
-6. Team: confirm the `metrics.json` layout per split (see the 18/10 log entry) before B5 writes its first run.
-7. Parallel work: B2-B5 (EDA, TF-IDF), C1-C3 (index, queries).
-8. Brian: C6 / C8 — take the head / middle / tail slice from `src.data.frequency_groups` (already used by A9) so that
-   the audit and the calibration report the same groups.
+1. Team: run the notebooks on a fresh clone (T3), then create the tags `m1`, `m2`, `m3`, `m4` and `v1.0`.
+2. Team: slides (T1, each stream its 2-3 slides; `results/figures/summary_test_scores.png` and
+   `summary_tradeoff.png` for the model ladder) and the timed rehearsal (T2).
 
 ## 6. Rule for updating this file
 
@@ -398,6 +392,21 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — final documentation consistency review (Robin)
+
+- **Team decisions applied**: LSTM (B6) dropped on 25/10, error analysis (B7 / B9) done by Robin without it;
+  near-duplicate check (B4) cancelled as out of scope (model card: de-duplicated test score "not done (out of
+  scope)", new limitation); Robin reviewed the 20 error tags (`results/error_analysis_reading.csv`, `tag_status`
+  and notebook 03 updated); Brian completed the 10 manual retrieval checks of notebook 02 (m2).
+- **Numbers**: every number of `README.md` and `docs/model_card.md` checked against its source in `results/`
+  (run `metrics.json`, `summary_classification.csv`, `paired_tests.csv`, `retrieval_summary.csv`, calibration JSON
+  and per-class CSV, `results/audit/`) with a throwaway script: no mismatch.
+- **Docs**: README milestone statuses (✅ with their deliverables), notebook table, project-structure tree,
+  prohibited uses pointing to the final model card, new "How to reproduce" section; `PROGRESS.md` overall status
+  rewritten as a final summary; final status for every task in `tasks/todo.md`; `STRATEGY.md` marked as the initial
+  plan; `notebooks/README.md` no longer lists the nonexistent notebook 00.
+- **Next action**: fresh-clone check, tags, slides (section 5).
 
 ### 25 October 2026 — unified comparison of the classifiers (B8, Robin)
 
@@ -447,13 +456,13 @@ Any deviation from the pre-registered comparison is logged here.
      239 clauses.
   4. **Truncation is not a major error source**: 1,083 test clauses (10.8 %) exceed 256 Legal-BERT tokens; their
      error rate is 11.1 % vs 13.0 % for shorter clauses (TF-IDF, which sees whole clauses: 13.9 % vs 15.3 %).
-  5. 20 errors read (10 with confidence ≥ 0.892, 10 below; **analyst reading, to be reviewed**): 13 overlapping
+  5. 20 errors read (10 with confidence ≥ 0.892, 10 below; analyst reading, **reviewed by Robin on 25/10**): 13 overlapping
      labels, 3 multi-topic, 2 generic label (Miscellaneous), 1 truncated, 1 possibly mislabelled; 7 of the 10
      high-confidence errors are overlapping labels. TF-IDF makes the same wrong prediction on 14 of the 20.
 - **Limitations**: single test evaluation per model; per-class F1 noisy on small classes; tags from one non-lawyer
   reader on 20 clauses (illustrations, not rates).
-- **Next action**: a lawyer (or teammate) reviews the 20 tags in `results/error_analysis_reading.csv`; consider these
-  findings for the slides (label-set overlap as the main residual error source). Tag `m3` once the team agrees.
+- **Next action**: Robin reviewed the 20 tags in `results/error_analysis_reading.csv` (done 25/10); use these
+  findings in the slides (label-set overlap as the main residual error source). Tag `m3` at delivery.
 
 ### 25 October 2026 — deviation from protocol: TF-IDF baseline not tuned on validation (A8, B5, Robin)
 
@@ -490,7 +499,8 @@ Any deviation from the pre-registered comparison is logged here.
 - **Sections 4, 6, 9**: every "pending" sentence removed; limitations added (small counterfactual samples,
   keyword-based party proxies, retrieval on a 5 % stratified test sample with same-label relevance, no temperature
   scaling, LSTM not delivered); the OOD item now states that `eval/ood/` was not used by the final audit.
-- **Next action**: none for C9; the de-duplicated test macro-F1 (B4) is still "Not computed" in section 4.
+- **Next action**: none for C9; the de-duplicated test macro-F1 (B4) was then cancelled (see the final consistency
+  review entry): "not done (out of scope)" in section 4.
 
 ### 20 October 2026 — stream A: paired-test script, full FT vs LoRA (A8, secondary comparison, Robin)
 
