@@ -54,8 +54,8 @@
 | C5 | Evaluate BM25 and MiniLM+BM25 RRF on the same sampled test queries | `src/retrieval/hybrid.py`, `notebooks/05_retrieval_eval.ipynb` | Sun 18/10 | C1 |
 | C6 | Classifier slice metrics: training-frequency groups, clause length, and explicitly labelled rule-detected party-role proxies | `src/audit/slices.py`, `notebooks/06_bias_audit.ipynb` | Sun 18/10 | A6 |
 | C7 | One-feature counterfactual stress tests; bounded to at most 1,000 reproducibly sampled test clauses | `eval/counterfactuals/`, `src/audit/perturb.py` | Mon 19/10 | — |
-| C8 | Focused audit on final classifier: per-slice F1 and counterfactual prediction/confidence changes; no retrieval or synthetic OOD audit claims | `results/audit/`, `notebooks/06_bias_audit.ipynb` | Tue 20/10 | A6, C6, C7 |
-| C9 | Model card: intended / prohibited uses, measured results, sample sizes, and limitations | `docs/model_card.md` | Wed 21/10 | C8, A9 |
+| [x] C8 | Focused audit on final classifier: per-slice F1 and counterfactual prediction/confidence changes; no retrieval or synthetic OOD audit claims | `results/audit/`, `notebooks/06_bias_audit.ipynb` | Tue 20/10 | A6, C6, C7 |
+| [x] C9 | Model card: intended / prohibited uses, measured results, sample sizes, and limitations | `docs/model_card.md` | Wed 21/10 | C8, A9 |
 
 ## Shared
 

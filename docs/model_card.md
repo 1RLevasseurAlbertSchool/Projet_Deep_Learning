@@ -2,9 +2,9 @@
 
 > Quantified classification and retrieval results below come from the recorded runs and `results/` artifacts.
 >
-> **Audit status:** per-slice and bounded counterfactual results are pending completion of notebook 06 against the final
-> model checkpoint and test predictions. Retrieval results are available from notebook 05 on a fixed stratified 5%
-> test sample. Draft lawyer queries are not evaluated because domain-expert relevance judgments are unavailable.
+> **Audit scope:** per-slice performance (section 5) and a bounded counterfactual stress test (section 6) of the final
+> model, from notebook 06 (`results/audit/`). Retrieval results come from notebook 05 on a fixed stratified 5% test
+> sample. Draft lawyer queries are not evaluated because domain-expert relevance judgments are unavailable.
 
 ## 1. Description
 
@@ -23,13 +23,28 @@
 - Suggest comparable clauses from the firm's clause bank.
 - Flag low-confidence clauses for **priority human review**.
 
-## 3. Prohibited or discouraged uses *(provisional)*
+## 3. Prohibited or discouraged uses
 
-- Legal advice, assessment of the validity, enforceability or unfairness of a clause.
-- **Non-English** clauses (French, German…) or clauses drafted with practices very different from SEC contracts.
-- Automatic decisions without human review (e.g. marking a contract as "compliant").
-- Clause types absent from the 100 classes: the model will still pick a known class.
-- Whole documents: the system works clause by clause.
+- **Non-English clauses** (French, German…) and clauses drafted with practices very different from US SEC
+  contracts. The training data is English clauses from US SEC filings only (60,000 clauses, 2016-2017), and the
+  model was never tested on another language or legal system: no performance estimate exists for them. The
+  jurisdiction counterfactuals of section 6 (New York → Luxembourg / England) change one word in a US clause; they do
+  not test European drafting.
+- **Clause types outside the 100 LEDGAR labels.** The classifier has no "other" class: it always returns one of the
+  100 labels, and it was not tested on clauses outside them. Its confidence is not a reliable alarm either: the model
+  is over-confident (test mean confidence 0.913 for an accuracy of 0.872, ECE 0.0425, section 8).
+- **Legal advice**, including judgments on the validity, enforceability or fairness of a clause. The model predicts
+  a clause type; nothing in its labels or in our evaluation measures legal quality. Retrieval relevance is measured
+  as "same LEDGAR label" (section 7), which does not show that a retrieved clause meets a specific legal constraint.
+- **Fully automatic labelling of rare clause types.** On the 2019 test set, tail classes reach a macro-F1 of 0.716
+  against 0.932 for head classes (section 5). At the recommended threshold, 13 tail classes are never predicted at
+  or above it, so any of their clauses that passes automatically carries a wrong label, and 14.2 % of the tail
+  clauses labelled automatically are wrong (115 of 811) against 2.6 % for head classes (section 8).
+- **Decisions without human review** (e.g. marking a contract as "compliant"), and in particular any use of a label
+  whose confidence is below **0.892** without a lawyer's check. That threshold was chosen on validation for 95 %
+  precision; on the 2019 test set, the 2,112 clauses below it contain 68.6 % of the model's errors. Labels above it
+  are still pre-labels: 403 wrong labels (5.1 % of the 7,888 automatic ones) would pass unreviewed (section 8).
+- **Whole documents**: the system was trained and evaluated clause by clause, not on full contracts.
 
 ## 4. Overall performance
 
@@ -53,36 +68,83 @@ The audit notebook computes slice macro-F1 over the true classes represented in 
 groups are defined by terciles of per-class train counts; clause-length groups use training word-count quartiles.
 Party-role groups rely on keyword heuristics, can overlap, and are not verified contract-type or party metadata.
 Automatic retrieval metrics use a reproducible sample of 5% of each test-label group (at least one query per
-represented label), not the full test set. The full training bank is retained. Classifier audit results remain
-pending until notebook 06 finishes.
+represented label), not the full test set. The full training bank is retained. Audit results are in sections 5
+and 6.
 
 ## 5. Per-slice performance
 
-| Slice | Macro-F1 | Support | Comment |
-|---|---:|---:|---|
-| Class frequency: head | | | |
-| Class frequency: middle | | | |
-| Class frequency: tail | | | |
-| Clause length: short / medium / long | | | |
-| Party roles: Borrower / Lender | | | |
-| Party roles: Employer / Employee | | | |
-| Party roles: Landlord / Tenant | | | |
-| Party roles: Buyer / Seller | | | |
+Final model `legal-bert_final_20261019-1523` on the full 2019 test set (10,000 clauses). Numbers from
+[`results/audit/slice_performance.csv`](../results/audit/slice_performance.csv)
+([`notebooks/06_bias_audit.ipynb`](../notebooks/06_bias_audit.ipynb)). Mean confidence = mean probability of the
+predicted class. Slice macro-F1 averages only the classes present in the slice, so a slice with few clauses per class
+gives a volatile value; no confidence interval was computed for the slices.
+
+- **Class frequency**: tercile of the class's training-set count (tail 23–341, middle 345–569, head 578–3,167
+  training clauses; 34 / 33 / 33 classes), the same groups as in section 8.
+- **Clause length**: word count against the training-set quartiles (short ≤ first quartile, long > third quartile,
+  medium in between).
+- **Party roles**: a clause enters a group when both role words appear in it (e.g. "borrower" and "lender"). No test
+  clause matched two pairs, so the role groups do not overlap here.
+
+| Slice | Macro-F1 | Accuracy | Mean confidence | Support | Comment |
+|---|---:|---:|---:|---:|---|
+| Class frequency: head | 0.932 | 0.928 | 0.947 | 6,350 | |
+| Class frequency: middle | 0.844 | 0.797 | 0.854 | 2,367 | |
+| Class frequency: tail | 0.716 | 0.731 | 0.854 | 1,283 | Weakest group; confidence well above accuracy |
+| Clause length: short | 0.735 | 0.869 | 0.913 | 2,960 | Lower macro-F1, same accuracy |
+| Clause length: medium | 0.791 | 0.871 | 0.916 | 4,797 | |
+| Clause length: long | 0.786 | 0.878 | 0.906 | 2,243 | |
+| Party roles: Borrower / Lender | 0.759 | 0.883 | 0.926 | 394 | Keyword proxy |
+| Party roles: Employer / Employee | 0.583 | 0.702 | 0.861 | 47 | Keyword proxy; **small sample, indicative only** |
+| Party roles: Landlord / Tenant | 0.601 | 0.695 | 0.862 | 118 | Keyword proxy |
+| Party roles: Buyer / Seller | 0.851 | 0.900 | 0.918 | 60 | Keyword proxy; **small sample, indicative only** |
+| Party roles: none detected | 0.790 | 0.874 | 0.913 | 9,381 | Reference for the role groups |
+
+The largest gap is between frequent and rare clause types: tail classes reach a macro-F1 of 0.716 against 0.932 for
+head classes (accuracy 0.731 vs 0.928), and the model is as confident on tail clauses as on middle ones (mean
+confidence 0.854 for both, for accuracies of 0.731 and 0.797).
+Employer/employee (0.583) and landlord/tenant (0.601) clauses score below clauses with no detected role (0.790), but
+on small samples of 47 and 118 clauses, so these gaps are indications, not established differences. Party roles are
+keyword proxies, not verified contract-type or party metadata.
 
 ## 6. Robustness and bias
 
-Counterfactuals are generated from a reproducible random sample of at most 1,000 test clauses that contain the
-relevant text feature; one feature is changed per pair. These are heuristic stress tests, not legal redrafts, and
-should be manually inspected. Their results are limited to this bounded sample and the specific transformations.
-Synthetic European/French OOD probes and retrieval-stability tests are not part of the focused final audit. Results
-are pending execution of [`notebooks/06_bias_audit.ipynb`](../notebooks/06_bias_audit.ipynb).
+Counterfactuals are generated from a reproducible random sample of 1,000 test clauses (seed 42). A pair is created
+only when the clause contains the targeted text feature, and each pair changes that one feature. The pronoun edit
+swaps only the words "he" and "she". These are heuristic stress tests, not legal redrafts, and should be manually
+inspected; their results are limited to this sample and these transformations. Synthetic European/French OOD probes
+and retrieval-stability tests are not part of the focused final audit.
 
-| Perturbation | Prediction flip rate | Confidence change |
-|---|---:|---:|
-| Swapping party roles | | |
-| Pronouns he ↔ she | | |
-| Jurisdiction (New York → Luxembourg…) | | |
-| Currency (USD → EUR) | | |
+Final model `legal-bert_final_20261019-1523`. Numbers from
+[`results/audit/counterfactual_summary.csv`](../results/audit/counterfactual_summary.csv)
+([`notebooks/06_bias_audit.ipynb`](../notebooks/06_bias_audit.ipynb)). Flip = the predicted label changes;
+confidence change = mean over the pairs of (confidence after the edit − confidence before), confidence being the
+probability of the predicted class.
+
+| Perturbation | Pairs | Flips | Flip rate | Mean confidence change |
+|---|---:|---:|---:|---:|
+| Swap borrower ↔ lender | 42 | 1 | 0.024 | +0.0010 |
+| Swap employer ↔ employee | 6 | 0 | 0.000 | −0.0039 |
+| Swap landlord ↔ tenant | 11 | 0 | 0.000 | −0.0012 |
+| Swap buyer ↔ seller | 7 | 0 | 0.000 | −0.0003 |
+| Pronouns he ↔ she | 17 | 0 | 0.000 | +0.0003 |
+| Jurisdiction New York → Delaware | 44 | 0 | 0.000 | −0.0011 |
+| Jurisdiction New York → England | 44 | 0 | 0.000 | −0.0051 |
+| Jurisdiction New York → Luxembourg | 44 | 0 | 0.000 | −0.0060 |
+| Currency USD → EUR ($ → €) | 21 | 0 | 0.000 | +0.0001 |
+| **All perturbations** | **236** | **1** | | |
+
+**The samples are small.** Only clauses that contain a targeted feature yield a pair, so the planned sample of
+1,000 test clauses yielded only 236 pairs in total, 6 to 44 per perturbation; the three jurisdiction edits are
+applied to the same 44 clauses. "No flip observed" on 6 to 44 pairs is therefore **weak evidence of robustness,
+not proof**: it remains compatible with a real flip rate of several percent or more. No significance test or
+confidence interval was computed.
+
+Within this sample, one prediction changed in 236 pairs (a borrower ↔ lender swap, on a clause whose original
+confidence was already below the 0.892 review threshold of section 8; see
+[`results/audit/counterfactual_predictions.csv`](../results/audit/counterfactual_predictions.csv)). Every mean
+confidence change stays below 0.01 in absolute value; the largest drops follow the two non-US jurisdictions
+(−0.0060 for Luxembourg, −0.0051 for England).
 
 ## 7. Retrieval evaluation
 
@@ -174,16 +236,25 @@ threshold chosen to just reach its target on validation.
 
 ## 9. Known limitations
 
-- No "contract type" metadata in LEDGAR: the per-contract breakdown relies on a proxy (party roles detected by
-  rules).
-- The shared LEDGAR loader does not expose row-level contract years. The test split is 2019 only, so no
-  within-test year comparison is reported.
-- Rule-based party detection can miss uncommon role terms, ambiguous drafting, or clauses that mention more than
-  one role pair.
+- **Small counterfactual samples**: 236 pairs from 1,000 sampled test clauses, 6 to 44 per perturbation, with the
+  three jurisdiction edits on the same 44 clauses (section 6). "No flip observed" is weak evidence, not proof of
+  robustness.
 - Counterfactual replacements are lexical stress tests and may alter legal meaning or produce awkward wording;
   generated examples must be reviewed before interpreting changes.
-- The OOD probe set is small, synthetic, and unlabelled; its confidence values are descriptive only and are not
-  estimates of performance on European or French contracts.
+- **Keyword-based party proxies**: LEDGAR has no contract-type or party metadata, so the per-party breakdown relies
+  on role words found in the clause. Only 619 of the 10,000 test clauses fall in a role group (47 to 394 per group),
+  and the rules can miss uncommon role terms or ambiguous drafting (section 5).
+- **Retrieval evaluated on a sample**: 499 test queries (a stratified 5 % of each test label), with relevance defined
+  as "same LEDGAR label"; these are not full-test estimates and not lawyer-judged relevance (section 7).
+- **No temperature scaling**: the prediction files store only the probability of the predicted class, so the
+  over-confidence measured in section 8 (test ECE 0.0425) is not corrected.
+- **LSTM not delivered**: the BiLSTM baseline was excluded from this delivery (README scope note), so the planned
+  Legal-BERT vs LSTM comparison is not reported; the classification comparison covers TF-IDF, full Legal-BERT
+  fine-tuning and LoRA.
+- No out-of-distribution evaluation: the synthetic probes in `eval/ood/` are unlabelled and were not used by the
+  final audit, so nothing is measured on European or French contracts.
+- The shared LEDGAR loader does not expose row-level contract years. The test split is 2019 only, so no
+  within-test year comparison is reported.
 - Chronological split: future performance may drop as drafting practices evolve.
 
 ## 10. Reproducibility

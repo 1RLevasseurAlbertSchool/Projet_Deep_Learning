@@ -87,8 +87,8 @@ probes and retrieval-stability audit claims remain out of scope.
 - [x] C4/C5 implementation: same-label ranking metrics for MiniLM, BGE-small, BM25, and MiniLM+BM25 RRF on a fixed stratified 5% test-query sample.
 - [ ] Run retrieval notebook, review the 10 m2 searches, and generate `results/retrieval_summary.csv`; C3 lawyer-query evaluation is out of scope.
 - [x] C6/C7 implementation prepared: train-defined frequency/length slices, rule-detected party-role proxies, and generated counterfactuals.
-- [x] C8 notebook prepared for final-model slice metrics and counterfactual inference bounded to at most 1,000 sampled test clauses; results remain pending required artifacts and execution.
-- [x] C9 model card updated with audit methodology and limitations; measured audit fields remain pending.
+- [x] C8 notebook 06 run on the final model: slice metrics and counterfactual results saved in `results/audit/` (25/10).
+- [x] C9 model card completed from the measured audit results: per-slice table, counterfactual table, concrete prohibited uses, limitations (25/10).
 
 ### Delivery
 - [ ] README results section filled with real results.
@@ -392,6 +392,27 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — stream C: model card completed from the audit results (C8, C9, Robin)
+
+- **Inputs** (numbers read only from these files): `results/audit/slice_performance.csv`,
+  `results/audit/counterfactual_summary.csv` (notebook 06, final model `legal-bert_final_20261019-1523`),
+  `results/paired_tests.csv`, `results/retrieval_summary.csv`, `results/calibration_legal-bert_final_20261019-1523.json`
+  and its per-class CSV. F1 values to 3 decimals in the new tables.
+- **Section 5 (per-slice, full 2019 test set)**: macro-F1 head 0.932 / middle 0.844 / **tail 0.716**; short 0.735 /
+  medium 0.791 / long 0.786 (accuracy 0.869 / 0.871 / 0.878); borrower/lender 0.759 (394 clauses), employer/employee
+  0.583 (47), landlord/tenant 0.601 (118), buyer/seller 0.851 (60), no role detected 0.790 (9,381). Slices with
+  support < 100 flagged "small sample, indicative only". Largest gap = head vs tail; party roles stated as keyword
+  proxies.
+- **Section 6 (counterfactuals)**: 236 pairs from the 1,000 sampled test clauses, 6 to 44 per perturbation; 1 flip
+  (borrower ↔ lender, 1 of 42), 0 for the 8 other perturbations; every mean confidence change below 0.01 in absolute
+  value. Stated as weak evidence of robustness, not proof.
+- **Section 3**: "(provisional)" removed; each prohibited use backed by evidence where it exists (training data,
+  tail macro-F1, per-class calibration at the 0.892 threshold, review threshold).
+- **Sections 4, 6, 9**: every "pending" sentence removed; limitations added (small counterfactual samples,
+  keyword-based party proxies, retrieval on a 5 % stratified test sample with same-label relevance, no temperature
+  scaling, LSTM not delivered); the OOD item now states that `eval/ood/` was not used by the final audit.
+- **Next action**: none for C9; the de-duplicated test macro-F1 (B4) is still "Not computed" in section 4.
 
 ### 20 October 2026 — stream A: paired-test script, full FT vs LoRA (A8, secondary comparison, Robin)
 
