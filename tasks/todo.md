@@ -32,7 +32,7 @@
 | [x] A7 | LoRA (r = 4, 8, 16; α = 2r; query/value) on the same encoder | trade-off table: `results/lora_tradeoff.csv` | Mon 19/10 | done 20/10 with a stated deviation: **r = 8 only** (`legal-bert_lora-r8_20261020-0940`); r = 4 / 16 not run (GPU time) |
 | [x] A8 | Paired tests: BERT vs TF-IDF (**main**), full vs LoRA, BERT vs LSTM | `scripts/paired_tests.py`, `results/paired_tests.csv` | Mon 19/10 | done: full vs LoRA r=8 (20/10); main pair by stream C (25/10, ΔF1 = +0.0281, **caveat: TF-IDF baseline not tuned on validation**); BERT vs LSTM dropped 25/10 (no LSTM) |
 | [x] A9 | Calibration (ECE, reliability diagram) + "human review" confidence threshold (coverage vs precision); per-class precision at the recommended threshold (test, head / middle / tail by training-frequency terciles) | `results/calibration_*`, reliability / coverage / per-class figures | Tue 20/10 | done 19/10 (no temperature scaling: stated limitation) |
-| [ ] A10 | README results section, PR reviews, tag `v1.0`, test on a fresh clone | final README | Thu 22/10 | README done 25/10 (final consistency review); PR reviews dropped 19/10 (team works on `main`, no PRs); **open**: fresh-clone check and tag `v1.0` (with T3) |
+| [x] A10 | README results section, PR reviews, tag `v1.0`, test on a fresh clone | final README | Thu 22/10 | README done 25/10 (final consistency review); PR reviews dropped 19/10 (team works on `main`, no PRs); end-to-end check 25/10 (with T3): demo script, notebook 07 and 71 tests re-run locally, notebooks run on a fresh clone by Brian earlier, 01 / 02 / 05 not re-executed locally, 04 on Colab; **tag `v1.0` still to be created** |
 
 ## Stream B — Amandine: Data, baselines, RNN
 
@@ -66,8 +66,11 @@
 
 - [ ] **T1** Slides (each stream provides its 2-3 slides) — Wed 21/10 — **open**
 - [ ] **T2** Timed 10-min rehearsal + likely CTO questions — Thu 22/10 — **open**
-- [ ] **T3** Code freeze, notebooks run on a fresh clone, tag `v1.0` — Thu 22/10 23:59 — documentation frozen 25/10
-  (final consistency review); **open**: fresh-clone check, tags `m1`-`m4` and `v1.0`
+- [x] **T3** Code freeze, notebooks run on a fresh clone, tag `v1.0` — Thu 22/10 23:59 — documentation frozen 25/10
+  (final consistency review); end-to-end check 25/10 (Robin): `scripts/demo.py` (clause and `--question`),
+  notebook 07 top to bottom and the test suite (71 passed) re-run locally without error; notebooks run on a fresh
+  clone by Brian earlier; not re-run: 01, 02, 05 (not re-executed locally), 04 (runs on Colab), 06 (executed by
+  Brian); **tags `m1`-`m4` and `v1.0` still to be created**
 - [x] **T4** (Bonus) Demo "clause → type + confidence + 5 closest clauses" — **done 25/10** (Robin): `src/pipeline.py`
   (`ClauseReviewer`), `scripts/demo.py`, `notebooks/07_demo.ipynb`, `tests/test_pipeline.py`; no retraining
 - ~~**T5**~~ Integrate the content of Session 7 (bias audit) into the C6-C9 plan — **cancelled 25/10**: the Session 7

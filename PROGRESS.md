@@ -6,7 +6,8 @@
 
 ## 1. Overall status
 
-**Final status (25/10/2026): ✅ code and documentation frozen; left: fresh-clone check, Git tags and slides (section 5).**
+**Final status (25/10/2026): ✅ code and documentation frozen, end-to-end check done (scope in the 25/10 log);
+left: Git tags and slides (section 5).**
 
 - **Classification (m1, m4).** Legal-BERT (`nlpaueb/legal-bert-base-uncased`, full fine-tuning, `max_length` 256,
   3 epochs) selected on validation over DistilBERT (validation macro-F1 0.7930 vs 0.7863) and evaluated once on the
@@ -107,7 +108,8 @@
 
 ### Delivery
 - [x] README results section filled with real results (25/10) and final documentation consistency review (25/10).
-- [ ] Notebooks run on a fresh clone (T3).
+- [x] Notebooks run on a fresh clone (T3): by Brian earlier; demo script, notebook 07 and tests re-run locally
+  by Robin (25/10); notebooks 01, 02, 05 not re-executed locally, 04 runs on Colab (see log, 25/10).
 - [ ] Slides + rehearsal (T1, T2).
 - [ ] Tags `m1`-`m4` and `v1.0`.
 - [x] Bonus end-to-end demo (T4, 25/10): `src/pipeline.py`, `scripts/demo.py`, notebook 07.
@@ -382,7 +384,7 @@ before the first push.
 
 ## 5. Next immediate action
 
-1. Team: run the notebooks on a fresh clone (T3), then create the tags `m1`, `m2`, `m3`, `m4` and `v1.0`.
+1. Team: create the tags `m1`, `m2`, `m3`, `m4` and `v1.0`.
 2. Team: slides (T1, each stream its 2-3 slides; `results/figures/summary_test_scores.png` and
    `summary_tradeoff.png` for the model ladder) and the timed rehearsal (T2).
 
@@ -395,6 +397,21 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — end-to-end check before delivery (A10 / T3, Robin)
+
+- **Re-run locally on 25/10 (Robin, `main`, MacBook, MPS), without error**:
+  - `python scripts/demo.py "<clause>"` (clause → top-3 types, decision, 5 closest training clauses);
+  - `python scripts/demo.py --question "<question>"` (retrieval only);
+  - `notebooks/07_demo.ipynb`, top to bottom;
+  - `python -m pytest -q` → **71 passed**.
+- **Fresh clone**: Brian ran the notebooks from a fresh clone earlier (date and exact notebook list not recorded
+  here).
+- **Not re-run in this check**: notebooks `01_eda_baseline`, `02_retrieval_index` and `05_retrieval_eval` were not
+  re-executed locally; `04_transformer_finetuning` runs on Colab (GPU) and was not re-run; `06_bias_audit` was
+  executed by Brian (C8, 25/10), not re-run by Robin; `03_error_analysis` was not part of this check (last run by
+  Robin for B7 / B9, 25/10). No training was re-run.
+- **Status**: A10 and T3 ticked with this scope; tags `m1`-`m4` and `v1.0` still to be created.
 
 ### 25 October 2026 — bonus end-to-end demo (T4, Robin)
 
