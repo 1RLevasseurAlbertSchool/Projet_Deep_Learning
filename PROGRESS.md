@@ -6,8 +6,8 @@
 
 ## 1. Overall status
 
-**Final status (25/10/2026): ✅ code and documentation frozen, end-to-end check done (scope in the 25/10 log);
-left: Git tags and slides (section 5).**
+**Final status (25/10/2026): ✅ code and documentation frozen, end-to-end check done (scope in the 25/10 log),
+milestone tags `m1`-`m4` and `v1.0` created; left: slides (section 5).**
 
 - **Classification (m1, m4).** Legal-BERT (`nlpaueb/legal-bert-base-uncased`, full fine-tuning, `max_length` 256,
   3 epochs) selected on validation over DistilBERT (validation macro-F1 0.7930 vs 0.7863) and evaluated once on the
@@ -66,20 +66,20 @@ left: Git tags and slides (section 5).**
 - [x] Class distribution and exact-text duplicates (notebook 01); token lengths (A3); no row-level years in the loader.
 - [ ] ~~Train/test near-duplicates measured.~~ Cancelled as out of scope (B4, 25/10).
 - [x] TF-IDF + LogReg: validation 0.7666 / test 0.7625 macro-F1 (C = 1.0 fixed, not tuned — stated deviation).
-- [ ] Tag `m1` (at delivery).
+- [x] Tag `m1` (`1e94b65`, 25/10).
 
 ### m2 — Retrieval index (Brian)
 - [x] Implemented reusable MiniLM dense retrieval with normalised cosine search and a validated embedding cache.
 - [x] Created notebook 02 with 10 qualitative searches (5 lawyer questions + 5 validation clauses).
 - [x] Notebook run on the full LEDGAR data (23/10), index built, the 10 manual relevance checks completed by Brian.
-- [ ] Tag `m2` (at delivery).
+- [x] Tag `m2` (`8157f39`, 25/10).
 
 ### m3 — LSTM and error analysis (Amandine; error analysis done by Robin)
 - [ ] ~~LSTM / BiLSTM with packing and GloVe.~~ Dropped by team decision (25/10).
 - [x] Per-class F1, most confused classes, truncation check, 20 errors read: Legal-BERT vs TF-IDF (B7 / B9,
   notebook 03, Robin, 25/10).
 - [x] Unified comparison table + figures of all classifiers (B8, `scripts/summary_classification.py`, Robin, 25/10).
-- [ ] Tag `m3` (at delivery).
+- [x] Tag `m3` (`6472356`, 25/10).
 
 ### m4 — Transformers (Robin)
 - [x] Generic fine-tuning script (`src/models/transformer.py`, `scripts/train_transformer.py`) + Colab notebook 04.
@@ -94,7 +94,7 @@ left: Git tags and slides (section 5).**
 - [x] LoRA run + trade-off table (A7, 20/10) — r = 8 only, r = 4 / 16 not run (stated deviation).
 - [x] Paired tests: full FT vs LoRA r=8 (20/10); BERT vs TF-IDF (main, by stream C) — ΔF1 = +0.0281, baseline not
   tuned on validation (stated deviation, 25/10). BERT vs LSTM dropped (no LSTM, team decision 25/10).
-- [ ] Tag `m4` (at delivery).
+- [x] Tag `m4` (`1e94b65`, 25/10).
 
 ### Retrieval and audit (Brian)
 - [x] C1 implementation: cached, normalized dense index with batched cosine search.
@@ -111,7 +111,7 @@ left: Git tags and slides (section 5).**
 - [x] Notebooks run on a fresh clone (T3): by Brian earlier; demo script, notebook 07 and tests re-run locally
   by Robin (25/10); notebooks 01, 02, 05 not re-executed locally, 04 runs on Colab (see log, 25/10).
 - [ ] Slides + rehearsal (T1, T2).
-- [ ] Tags `m1`-`m4` and `v1.0`.
+- [x] Tags `m1`-`m4` and `v1.0` (25/10).
 - [x] Bonus end-to-end demo (T4, 25/10): `src/pipeline.py`, `scripts/demo.py`, notebook 07.
 
 ## 3. Results observed so far
@@ -384,8 +384,7 @@ before the first push.
 
 ## 5. Next immediate action
 
-1. Team: create the tags `m1`, `m2`, `m3`, `m4` and `v1.0`.
-2. Team: slides (T1, each stream its 2-3 slides; `results/figures/summary_test_scores.png` and
+1. Team: slides (T1, each stream its 2-3 slides; `results/figures/summary_test_scores.png` and
    `summary_tradeoff.png` for the model ladder) and the timed rehearsal (T2).
 
 ## 6. Rule for updating this file
@@ -397,6 +396,23 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — milestone tags (Robin)
+
+- **Annotated tags**, each on the commit where the milestone was reached (found from `git log` and the files each
+  commit added):
+  - `m1` → `1e94b65` (23/10, Brian): first commit with `results/runs/tfidf-logreg_baseline_20261023/` (notebook 01
+    added in `4e20121`); test macro-F1 0.7625.
+  - `m2` → `8157f39` (23/10, Brian): notebook 02 executed (10 searches); notebook not changed afterwards. The result
+    of the manual check is recorded only in this file (`50263a7`), not in the notebook.
+  - `m3` → `6472356` (25/10, Robin): notebook 03 added, executed; message "error analysis only, LSTM dropped by team
+    decision on 25/10". The 20 error tags were marked as reviewed later, in `50263a7`.
+  - `m4` → `1e94b65`: first commit where `results/paired_tests.csv` contains Legal-BERT vs TF-IDF (Legal-BERT in
+    `423387c`, LoRA trade-off table in `864b4c3`, both earlier). `m1` and `m4` therefore share a commit, and `m2`
+    precedes `m1` in the history.
+  - `v1.0` → this commit (final delivery, "Final delivery: Clause Review Assistant NLP core").
+- **Not pushed** from this session: the tags are pushed by Robin.
+- **Docs**: README milestone note, status and progress table of this file.
 
 ### 25 October 2026 — end-to-end check before delivery (A10 / T3, Robin)
 

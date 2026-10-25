@@ -49,7 +49,9 @@ The initial plan (14/10) is in [`STRATEGY.md`](STRATEGY.md); the final status of
 | **m4** | **BERT-class fine-tuning** (full) + **LoRA** r = 8 + trade-off table + paired tests + calibration | `notebooks/04_transformer_finetuning.ipynb`, `results/runs/`, `results/lora_tradeoff.csv`, `results/paired_tests.csv`, `results/calibration_*` | ✅ |
 | audit | Two dense encoders, BM25 and hybrid retrieval evaluation on a fixed stratified 5% test sample; focused classifier slice and counterfactual audit; model card | `notebooks/05_retrieval_eval.ipynb`, `notebooks/06_bias_audit.ipynb`, `results/retrieval_summary.csv`, `results/audit/`, `docs/model_card.md` | ✅ |
 
-The Git tags `m1` to `m4` and `v1.0` are not created yet (done at delivery).
+Each milestone has an annotated Git tag on the commit where it was reached (`git tag -n`): `m1` and `m4` on
+`1e94b65` (TF-IDF run and the Legal-BERT vs TF-IDF paired test committed together), `m2` on `8157f39`, `m3` on
+`6472356`, and `v1.0` on the final delivery commit.
 
 To keep the retrieval comparison runnable, notebook 05 evaluates two dense encoders, BM25 and a MiniLM+BM25 hybrid on a reproducible, stratified 5% sample of test clauses. These are sampled estimates, not full-test scores; indexing still uses the full training bank. Lawyer-query examples are retained as drafts but are not evaluated because no domain-expert relevance judgments are available. Notebook 06 reports classifier slices and counterfactual results from a bounded sample. It does not claim a broad audit of contract types, parties, languages, or retrieval robustness.
 
