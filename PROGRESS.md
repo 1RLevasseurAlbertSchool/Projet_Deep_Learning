@@ -29,6 +29,7 @@ no third pair.
 Error analysis (B7 / B9, notebook 03, 25/10): the gain over TF-IDF is spread evenly over head / middle / tail
 classes (mean per-class ΔF1 +0.0295 / +0.0250 / +0.0298); TF-IDF is better on 16 classes; most errors are
 near-synonym label pairs that TF-IDF shares; truncation at 256 tokens is not a major error source.
+Unified comparison (B8, 25/10): `results/summary_classification.csv` + 3 figures (`results/figures/summary_*.png`), one row per model (TF-IDF, DistilBERT validation only, Legal-BERT final, LoRA r=8); the README results table is generated from it.
 
 **Stream C scope update (23/10):** notebook 05 compares two dense encoders, BM25, and MiniLM+BM25 RRF on a
 reproducible, label-stratified 5% sample of test queries, retaining the full training bank. Draft lawyer queries are
@@ -70,6 +71,7 @@ probes and retrieval-stability audit claims remain out of scope.
 - [ ] ~~LSTM / BiLSTM with packing and GloVe.~~ Dropped by team decision (25/10).
 - [x] Per-class F1, most confused classes, truncation check, 20 errors read: Legal-BERT vs TF-IDF (B7 / B9,
   notebook 03, Robin, 25/10).
+- [x] Unified comparison table + figures of all classifiers (B8, `scripts/summary_classification.py`, Robin, 25/10).
 - [ ] Tag `m3`.
 
 ### m4 — Transformers (Robin)
@@ -396,6 +398,28 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — unified comparison of the classifiers (B8, Robin)
+
+- **Done**: `scripts/summary_classification.py` reads `results/runs/*/{config,metrics}.json` (smoke runs and
+  `legal-bert_full_20261019-0916`, re-evaluated as `legal-bert_final_20261019-1523`, are skipped; an unknown run
+  makes the script fail rather than vanish), `results/paired_tests.csv` (test, whole split) and
+  `results/lora_tradeoff.csv` (cross-check: parameters, % of full, train time, test macro-F1 must match the run
+  files). Writes `results/summary_classification.csv` (display cells: 3 decimals for F1 and accuracy, "not run" /
+  "not recorded" where no number exists) and three figures in `results/figures/`: `summary_test_scores.png` (test
+  macro-F1 and accuracy, ΔF1 to Legal-BERT with its paired-bootstrap CI), `summary_per_class_f1.png` (per-class
+  test F1 sorted by Legal-BERT), `summary_tradeoff.png` (trained parameters, log scale, vs test macro-F1).
+- **Result**: test macro-F1 Legal-BERT 0.791, LoRA r=8 0.769 (ΔF1 +0.021 [+0.013, +0.036], McNemar p 1.74e-15),
+  TF-IDF 0.762 (ΔF1 +0.028 [+0.018, +0.039], p 1.71e-16); DistilBERT validation 0.786, test not run. Per class
+  (test): TF-IDF and LoRA are each above Legal-BERT on 16 of the 100 classes; Legal-BERT has F1 = 0 on 2 classes and
+  F1 < 0.5 on 7.
+- **Numbers not in the run files**, kept in one dict of the script with their source: TF-IDF validation macro-F1
+  0.766555 (output of notebook 01; its `metrics.json` has no validation block) and the weights on disk of A7
+  (438,260,096 / 1,494,128 bytes). TF-IDF trained parameters are derived from `config.json`: 100 × (173,477 + 1) =
+  17,347,800 LogReg weights. TF-IDF train time not recorded; DistilBERT weights size not recorded.
+- **Docs**: README results table replaced by the generated one (same cells as the CSV), F1 deltas in the paragraph
+  below it now at 3 decimals; B8 ticked in `tasks/todo.md`.
+- **Next action**: use `summary_test_scores.png` and `summary_tradeoff.png` in the slides.
 
 ### 25 October 2026 — error analysis of Legal-BERT vs TF-IDF (B7 / B9, Robin)
 
