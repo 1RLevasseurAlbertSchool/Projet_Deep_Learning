@@ -39,9 +39,9 @@
 | B4 | Train/test near-duplicates (exact normalised text + TF-IDF similarity > 0.95): share of the test set affected | number + list of de-duplicated `idx` | Fri 16/10 | B1 |
 | [x] B5 | **TF-IDF + LogReg** baseline (1-2 n-grams, C tuned on validation), val/test macro-F1, predictions in the common format → **tag m1** — **deviation: C = 1.0 fixed, not tuned** (grid not run, ≈ 187 s and 5.4 GB RAM per C value); `tfidf-logreg_baseline_20261023`, val 0.7666 / test 0.7625 macro-F1 | run + predictions | Fri 16/10 | B1 |
 | ~~B6~~ | **Dropped (team decision, 25/10).** **LSTM / BiLSTM**: train vocabulary (`min_freq`), `<pad>`=0 `<unk>`=1, packing, GloVe, PyTorch loop, clipping, early stopping on validation | `src/models/lstm.py`, `notebooks/03_lstm_classifier.ipynb` | Sat 17/10 | B1 |
-| ~~B7~~ | **Dropped with the LSTM (team decision, 25/10).** Error analysis: per-class F1 vs support, top 10 confused pairs, 20 errors read and commented → **tag m3** | section of notebook 03 | Sun 18/10 | B5, B6 |
+| [x] B7 | Error analysis: per-class F1 vs support, top 10 confused pairs, 20 errors read and commented → **tag m3** — **done by Robin (25/10)** without the LSTM (dropped 25/10), on Legal-BERT vs TF-IDF, together with B9 | `notebooks/03_error_analysis.ipynb`, `src/analysis.py` | Sun 18/10 | B5, ~~B6~~ |
 | B8 | Unified comparison table of all models + figures (macro-F1, per-class F1) | `results/summary_classification.csv` | Mon 19/10 | A6, A7 |
-| B9 | Error analysis of the final model (stream A): which classes does BERT fix compared with TF-IDF? | figure + comment | Tue 20/10 | A6 |
+| [x] B9 | Error analysis of the final model (stream A): which classes does BERT fix compared with TF-IDF? — **done by Robin (25/10)** | `results/error_analysis_*.csv`, `results/figures/error_analysis_*.png`, findings in notebook 03 | Tue 20/10 | A6 |
 
 ## Stream C — Brian: Retrieval, audit, model card
 

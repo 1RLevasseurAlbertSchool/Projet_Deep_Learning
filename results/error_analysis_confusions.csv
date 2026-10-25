@@ -1,0 +1,11 @@
+true,pred,true_name,pred_name,count,share_of_true,tfidf_same_clauses,tfidf_pair_count
+4,47,Applicable Laws,Governing Laws,41,0.7736,41,42
+86,99,Tax Withholdings,Withholdings,26,0.3467,16,24
+28,29,Defined Terms,Definitions,25,0.4464,13,18
+99,86,Withholdings,Tax Withholdings,25,0.2336,6,10
+52,38,Integration,Entire Agreements,24,0.4068,23,28
+60,2,Modifications,Amendments,21,0.3818,19,24
+98,76,Warranties,Representations,21,0.2165,9,11
+84,13,Successors,Binding Effects,20,0.2083,20,21
+29,28,Definitions,Defined Terms,18,0.1513,5,9
+63,97,No Waivers,Waivers,18,0.2143,15,28

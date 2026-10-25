@@ -76,17 +76,22 @@ class RepeatedTestEvaluationError(RuntimeError):
     """The test set was already predicted with this model."""
 
 
-def token_length_stats(model_name: str, texts) -> dict:
-    """Token-length distribution with the model's own tokenizer, without truncation.
+def token_lengths(model_name: str, texts, revision: str | None = None) -> np.ndarray:
+    """Number of tokens of every text with the model's own tokenizer, without truncation.
 
     Lengths include the special tokens ([CLS], [SEP]...), i.e. what `max_length` truncates.
     """
     from transformers import AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
     # The "sequence longer than model_max_length" warning is expected here: we measure, we do not feed the model
     tokenizer.model_max_length = int(1e9)
-    lengths = np.array([len(ids) for ids in tokenizer(list(texts), truncation=False)["input_ids"]])
+    return np.array([len(ids) for ids in tokenizer(list(texts), truncation=False)["input_ids"]])
+
+
+def token_length_stats(model_name: str, texts) -> dict:
+    """Token-length distribution with the model's own tokenizer, without truncation (see `token_lengths`)."""
+    lengths = token_lengths(model_name, texts)
     stats = {"n": int(len(lengths)), "mean": float(lengths.mean())}
     for q in (50, 90, 95, 99):
         stats[f"p{q}"] = float(np.percentile(lengths, q))

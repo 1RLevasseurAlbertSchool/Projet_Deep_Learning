@@ -24,8 +24,11 @@ human-review threshold 0.892 chosen on validation → **78.9 % of the test claus
 Main comparison (A8, run by stream C): Legal-BERT vs TF-IDF + LogReg (`tfidf-logreg_baseline_20261023`, test
 macro-F1 0.7625) → **ΔF1 = +0.0281 [+0.0180; +0.0390]**, McNemar p = 1.7e-16: **H1 supported, with a caveat** —
 the baseline uses a fixed C = 1.0 and was not tuned on validation as pre-registered (validation macro-F1 0.7666), so
-the gap may be slightly overstated (see the 25/10 log entry). LSTM (B6, B7) **dropped by team decision on 25/10**:
+the gap may be slightly overstated (see the 25/10 log entry). LSTM (B6) **dropped by team decision on 25/10**:
 no third pair.
+Error analysis (B7 / B9, notebook 03, 25/10): the gain over TF-IDF is spread evenly over head / middle / tail
+classes (mean per-class ΔF1 +0.0295 / +0.0250 / +0.0298); TF-IDF is better on 16 classes; most errors are
+near-synonym label pairs that TF-IDF shares; truncation at 256 tokens is not a major error source.
 
 **Stream C scope update (23/10):** notebook 05 compares two dense encoders, BM25, and MiniLM+BM25 RRF on a
 reproducible, label-stratified 5% sample of test queries, retaining the full training bank. Draft lawyer queries are
@@ -63,9 +66,10 @@ probes and retrieval-stability audit claims remain out of scope.
 - [ ] Run notebook on the full LEDGAR data, build the index, and complete the 10 manual relevance checks.
 - [ ] Tag `m2`.
 
-### m3 — LSTM and error analysis (Amandine)
+### m3 — LSTM and error analysis (Amandine; error analysis done by Robin)
 - [ ] ~~LSTM / BiLSTM with packing and GloVe.~~ Dropped by team decision (25/10).
-- [ ] Per-class F1, most confused classes.
+- [x] Per-class F1, most confused classes, truncation check, 20 errors read: Legal-BERT vs TF-IDF (B7 / B9,
+  notebook 03, Robin, 25/10).
 - [ ] Tag `m3`.
 
 ### m4 — Transformers (Robin)
@@ -392,6 +396,40 @@ Never replace a real result with an assumption. A task stays `[ ]` until it has 
 Any deviation from the pre-registered comparison is logged here.
 
 ## 7. Chronological log
+
+### 25 October 2026 — error analysis of Legal-BERT vs TF-IDF (B7 / B9, Robin)
+
+- **Inputs**: test predictions of `legal-bert_final_20261019-1523` and `tfidf-logreg_baseline_20261023`. The TF-IDF
+  file was missing (gitignored); regenerated with the new `scripts/regenerate_tfidf_predictions.py`, which refits the
+  notebook 01 configuration on train (C = 1, 1-2 n-grams, `min_df` 2, sublinear TF, lbfgs) and saves only if the test
+  metrics equal the run's `metrics.json`: **identical** (macro-F1 0.7624604208220832, accuracy 0.8486; 173,477
+  features). The run's `config.json` / `metrics.json` were not touched.
+- **Code**: `src/analysis.py` (per-class comparison, top confusions with TF-IDF overlap, error rate by token length,
+  stratified error sample, two plots), `tests/test_analysis.py`; `src.models.transformer.token_lengths` split out of
+  `token_length_stats`. Story in `notebooks/03_error_analysis.ipynb` (slot 03 freed by the LSTM).
+- **Outputs**: `results/error_analysis_per_class.csv`, `results/error_analysis_confusions.csv`,
+  `results/error_analysis_truncation.csv`, `results/error_analysis_reading.csv`,
+  `results/figures/error_analysis_delta_f1_vs_frequency.png`, `results/figures/error_analysis_confusions.png`.
+- **Findings** (numbers from those CSVs; descriptive, no per-class test):
+  1. Gain spread evenly across frequency groups: mean per-class ΔF1 (Legal-BERT − TF-IDF) **+0.0295 head, +0.0250
+     middle, +0.0298 tail**; tail stays the weakest (mean Legal-BERT F1 0.668 vs 0.901 head). Better or tied on 84
+     classes; largest gains Forfeitures +0.166 (52 test clauses), Agreements +0.161, General +0.157 (Qualifications
+     +0.167 rests on 5 test clauses).
+  2. **TF-IDF better on 16 classes**, mostly near-synonym families: Enforcements −0.181, Consent To Jurisdiction
+     −0.137, Defined Terms −0.136, Submission To Jurisdiction −0.105, Tax Withholdings −0.087.
+  3. **Top 10 confusions = 239 of the 1,283 Legal-BERT errors**, all between closely related labels: Applicable Laws →
+     Governing Laws 41 (77.4 % of Applicable Laws clauses), Tax Withholdings ↔ Withholdings 26 / 25, Defined Terms ↔
+     Definitions 25 / 18, Integration → Entire Agreements 24. TF-IDF predicts the same wrong class on 167 of these
+     239 clauses.
+  4. **Truncation is not a major error source**: 1,083 test clauses (10.8 %) exceed 256 Legal-BERT tokens; their
+     error rate is 11.1 % vs 13.0 % for shorter clauses (TF-IDF, which sees whole clauses: 13.9 % vs 15.3 %).
+  5. 20 errors read (10 with confidence ≥ 0.892, 10 below; **analyst reading, to be reviewed**): 13 overlapping
+     labels, 3 multi-topic, 2 generic label (Miscellaneous), 1 truncated, 1 possibly mislabelled; 7 of the 10
+     high-confidence errors are overlapping labels. TF-IDF makes the same wrong prediction on 14 of the 20.
+- **Limitations**: single test evaluation per model; per-class F1 noisy on small classes; tags from one non-lawyer
+  reader on 20 clauses (illustrations, not rates).
+- **Next action**: a lawyer (or teammate) reviews the 20 tags in `results/error_analysis_reading.csv`; consider these
+  findings for the slides (label-set overlap as the main residual error source). Tag `m3` once the team agrees.
 
 ### 25 October 2026 — deviation from protocol: TF-IDF baseline not tuned on validation (A8, B5, Robin)
 

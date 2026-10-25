@@ -1,0 +1,101 @@
+label,label_name,train_count,frequency_group,test_support,f1_bert,f1_tfidf,delta_f1
+0,Adjustments,326,tail,88,0.9222,0.8824,0.0399
+1,Agreements,252,tail,48,0.5476,0.3871,0.1605
+2,Amendments,1467,head,224,0.8596,0.8294,0.0302
+3,Anti-Corruption Laws,106,tail,23,0.9565,0.8293,0.1273
+4,Applicable Laws,352,middle,53,0.037,0.0,0.037
+5,Approvals,178,tail,26,0.5714,0.5128,0.0586
+6,Arbitration,385,middle,47,0.902,0.8762,0.0258
+7,Assignments,1327,head,195,0.89,0.8386,0.0515
+8,Assigns,31,tail,4,0.0,0.0,0.0
+9,Authority,549,middle,62,0.6341,0.6116,0.0226
+10,Authorizations,620,head,90,0.7598,0.763,-0.0032
+11,Base Salary,656,head,112,0.982,0.9646,0.0174
+12,Benefits,397,middle,81,0.7947,0.76,0.0347
+13,Binding Effects,588,head,126,0.7164,0.7286,-0.0122
+14,Books,23,tail,2,0.0,0.0,0.0
+15,Brokers,389,middle,70,0.9859,0.9784,0.0075
+16,Capitalization,434,middle,63,0.9839,0.9672,0.0167
+17,Change In Control,349,middle,87,0.9274,0.8757,0.0517
+18,Closings,541,middle,64,0.9922,0.9767,0.0155
+19,Compliance With Laws,960,head,208,0.9412,0.9157,0.0255
+20,Confidentiality,1012,head,167,0.9501,0.8949,0.0553
+21,Consent To Jurisdiction,175,tail,33,0.6133,0.75,-0.1367
+22,Consents,444,middle,81,0.7771,0.7484,0.0287
+23,Construction,406,middle,63,0.6719,0.7244,-0.0525
+24,Cooperation,469,middle,82,0.8987,0.8447,0.054
+25,Costs,168,tail,15,0.5455,0.5385,0.007
+26,Counterparts,2427,head,490,0.9898,0.9859,0.004
+27,Death,278,tail,66,0.8939,0.8571,0.0368
+28,Defined Terms,354,middle,56,0.5556,0.6916,-0.136
+29,Definitions,566,middle,119,0.7521,0.813,-0.0609
+30,Disability,263,tail,48,0.8542,0.7816,0.0726
+31,Disclosures,590,head,97,0.9101,0.9071,0.0029
+32,Duties,354,middle,58,0.8421,0.7258,0.1163
+33,Effective Dates,462,middle,74,0.8684,0.8138,0.0546
+34,Effectiveness,229,tail,31,0.6562,0.6087,0.0476
+35,Employment,308,tail,47,0.7447,0.7059,0.0388
+36,Enforceability,244,tail,45,0.6053,0.5946,0.0107
+37,Enforcements,201,tail,42,0.4194,0.6,-0.1806
+38,Entire Agreements,2340,head,376,0.9333,0.9215,0.0118
+39,Erisa,324,tail,58,0.9831,0.9643,0.0188
+40,Existence,258,tail,42,0.8947,0.88,0.0147
+41,Expenses,1224,head,183,0.8992,0.8734,0.0258
+42,Fees,578,head,89,0.8409,0.8047,0.0362
+43,Financial Statements,677,head,82,0.9939,0.9697,0.0242
+44,Forfeitures,300,tail,52,0.8991,0.7327,0.1664
+45,Further Assurances,1009,head,152,0.9446,0.9274,0.0172
+46,General,976,head,203,0.6556,0.4988,0.1569
+47,Governing Laws,3167,head,582,0.9369,0.9303,0.0066
+48,Headings,587,head,220,0.9798,0.9754,0.0044
+49,Indemnifications,936,head,152,0.9148,0.8727,0.0421
+50,Indemnity,271,tail,29,0.5116,0.5,0.0116
+51,Insurances,1104,head,133,0.9778,0.9382,0.0396
+52,Integration,304,tail,59,0.6667,0.6279,0.0388
+53,Intellectual Property,473,middle,64,0.9242,0.9313,-0.0071
+54,Interests,366,middle,42,0.9114,0.8718,0.0396
+55,Interpretations,386,middle,76,0.7324,0.7465,-0.0141
+56,Jurisdictions,202,tail,29,0.3636,0.4255,-0.0619
+57,Liens,313,tail,49,0.8958,0.8478,0.048
+58,Litigations,1034,head,129,0.9612,0.9453,0.0159
+59,Miscellaneous,479,middle,79,0.5235,0.386,0.1375
+60,Modifications,255,tail,55,0.5591,0.4507,0.1084
+61,No Conflicts,741,head,104,0.9238,0.8837,0.0401
+62,No Defaults,327,tail,63,0.9365,0.8833,0.0532
+63,No Waivers,445,middle,84,0.7784,0.7248,0.0536
+64,Non-Disparagement,363,middle,46,0.9892,0.9375,0.0517
+65,Notices,2493,head,422,0.9739,0.9578,0.016
+66,Organizations,409,middle,73,0.8919,0.8667,0.0252
+67,Participations,459,middle,70,0.9589,0.9091,0.0498
+68,Payments,856,head,126,0.7971,0.7148,0.0823
+69,Positions,190,tail,32,0.6316,0.5161,0.1154
+70,Powers,125,tail,13,0.4828,0.4706,0.0122
+71,Publicity,345,middle,42,0.9639,0.9512,0.0126
+72,Qualifications,47,tail,5,0.5,0.3333,0.1667
+73,Records,323,tail,31,0.9118,0.9062,0.0055
+74,Releases,621,head,60,0.8983,0.848,0.0503
+75,Remedies,664,head,118,0.8525,0.8413,0.0112
+76,Representations,569,middle,94,0.7656,0.674,0.0915
+77,Sales,327,tail,45,0.8444,0.8101,0.0343
+78,Sanctions,118,tail,14,0.8148,0.8462,-0.0313
+79,Severability,1808,head,412,0.9689,0.96,0.0089
+80,Solvency,419,middle,66,0.9924,0.9618,0.0305
+81,Specific Performance,326,tail,43,0.7742,0.7654,0.0088
+82,Submission To Jurisdiction,238,tail,29,0.5614,0.6667,-0.1053
+83,Subsidiaries,563,middle,63,0.9683,0.9302,0.038
+84,Successors,444,middle,96,0.7119,0.675,0.0369
+85,Survival,1469,head,222,0.9563,0.9307,0.0256
+86,Tax Withholdings,380,middle,75,0.561,0.6475,-0.0865
+87,Taxes,1089,head,185,0.8476,0.8287,0.0189
+88,Terminations,1112,head,118,0.8362,0.7805,0.0557
+89,Terms,1166,head,176,0.8698,0.8,0.0698
+90,Titles,317,tail,45,0.7273,0.6301,0.0971
+91,Transactions With Affiliates,353,middle,46,1.0,0.9663,0.0337
+92,Use Of Proceeds,866,head,120,0.9833,0.9669,0.0164
+93,Vacations,341,tail,52,0.9808,0.9903,-0.0095
+94,Venues,131,tail,20,0.4375,0.4,0.0375
+95,Vesting,451,middle,87,0.9171,0.7778,0.1393
+96,Waiver Of Jury Trials,768,head,111,0.9732,0.9776,-0.0044
+97,Waivers,878,head,166,0.826,0.7967,0.0293
+98,Warranties,499,middle,97,0.6994,0.6627,0.0367
+99,Withholdings,517,middle,107,0.6906,0.751,-0.0604

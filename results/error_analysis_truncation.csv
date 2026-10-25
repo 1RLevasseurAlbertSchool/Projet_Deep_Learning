@@ -1,0 +1,5 @@
+model,length_group,n,n_errors,error_rate
+legal-bert,<= 256 tokens,8917,1163,0.1304
+legal-bert,> 256 tokens,1083,120,0.1108
+tfidf,<= 256 tokens,8917,1364,0.153
+tfidf,> 256 tokens,1083,150,0.1385
